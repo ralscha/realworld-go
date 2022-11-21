@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"github.com/alexedwards/scs/sqlite3store"
+	"github.com/alexedwards/scs/v2"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"golang.org/x/exp/slog"
 	"log"
@@ -9,13 +11,15 @@ import (
 	"os"
 	"realworldgo.rasc.ch/internal/config"
 	"realworldgo.rasc.ch/internal/database"
+	"realworldgo.rasc.ch/internal/scsheader"
 	"realworldgo.rasc.ch/internal/version"
 	"time"
 )
 
 type application struct {
-	config *config.Config
-	db     *sql.DB
+	config         *config.Config
+	db             *sql.DB
+	sessionManager *scsheader.HeaderSession
 }
 
 func main() {
@@ -46,6 +50,10 @@ func main() {
 	defer func(db *sql.DB) {
 		_ = db.Close()
 	}(db)
+
+	sm := scsheader.HeaderSession{SessionManager: scs.New()}
+	sm.Store = sqlite3store.NewWithCleanupInterval(db, 30*time.Minute)
+	sm.Lifetime = 24 * time.Hour
 
 	err = initAuth(cfg)
 	if err != nil {

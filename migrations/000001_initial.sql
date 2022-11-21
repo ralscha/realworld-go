@@ -1,5 +1,5 @@
 -- +goose Up
-create table user
+CREATE TABLE user
 (
     id       INTEGER      NOT NULL PRIMARY KEY AUTOINCREMENT,
     username varchar(255) NOT NULL UNIQUE,
@@ -9,7 +9,7 @@ create table user
     image    varchar(511)
 );
 
-create table article
+CREATE TABLE article
 (
     id          INTEGER      NOT NULL PRIMARY KEY AUTOINCREMENT,
     user_id     int,
@@ -22,7 +22,7 @@ create table article
     constraint fk_article_user foreign key (user_id) references user (id) ON DELETE CASCADE
 );
 
-create table article_favorite
+CREATE TABLE article_favorite
 (
     id         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     article_id int     NOT NULL,
@@ -31,7 +31,7 @@ create table article_favorite
     constraint fk_article_favorite_user foreign key (user_id) references user (id) ON DELETE CASCADE
 );
 
-create table follow
+CREATE TABLE follow
 (
     id        INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     user_id   int     NOT NULL,
@@ -40,13 +40,13 @@ create table follow
     constraint fk_follow_follow_user foreign key (follow_id) references user (id) ON DELETE CASCADE
 );
 
-create table tag
+CREATE TABLE tag
 (
     id   INTEGER      NOT NULL PRIMARY KEY AUTOINCREMENT,
     name varchar(255) NOT NULL UNIQUE
 );
 
-create table article_tag
+CREATE TABLE article_tag
 (
     id         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     article_id int     NOT NULL,
@@ -55,7 +55,7 @@ create table article_tag
     constraint fk_article_tag_tag foreign key (tag_id) references tag (id) ON DELETE CASCADE
 );
 
-create table comment
+CREATE TABLE comment
 (
     id         INTEGER   NOT NULL PRIMARY KEY AUTOINCREMENT,
     body       text      NOT NULL,
@@ -66,6 +66,15 @@ create table comment
     constraint fk_comment_user foreign key (user_id) references user (id) ON DELETE CASCADE,
     constraint fk_comment_article foreign key (article_id) references article (id) ON DELETE CASCADE
 );
+
+CREATE TABLE sessions
+(
+    token  TEXT PRIMARY KEY,
+    data   BLOB NOT NULL,
+    expiry REAL NOT NULL
+);
+
+CREATE INDEX sessions_expiry_idx ON sessions (expiry);
 
 
 -- +goose Down

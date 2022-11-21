@@ -18,6 +18,8 @@ require (
 
 require (
 	github.com/alexedwards/argon2id v0.0.0-20211130144151-3585854a6387 // indirect
+	github.com/alexedwards/scs/sqlite3store v0.0.0-20220528130143-d93ace5be94b // indirect
+	github.com/alexedwards/scs/v2 v2.5.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect

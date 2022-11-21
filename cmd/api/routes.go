@@ -38,6 +38,7 @@ func (app *application) routes() http.Handler {
 
 func (app *application) authenticatedRouter() http.Handler {
 	r := chi.NewRouter()
+	r.Use(app.sessionManager.LoadAndSaveHeader)
 	r.Use(app.authenticatedOnly)
 
 	return r
