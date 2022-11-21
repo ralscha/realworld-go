@@ -62,8 +62,9 @@ func main() {
 	}
 
 	app := &application{
-		config: &cfg,
-		db:     db,
+		config:         &cfg,
+		db:             db,
+		sessionManager: &sm,
 	}
 
 	logger.Info("starting server", "addr", app.config.HTTP.Port, "version", version.Get())

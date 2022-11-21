@@ -85,3 +85,4 @@ DROP TABLE follow;
 DROP TABLE article_favorite;
 DROP TABLE article;
 DROP TABLE user;
+DROP TABLE sessions;

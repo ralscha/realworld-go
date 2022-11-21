@@ -51,7 +51,7 @@ func (app *application) authenticatedOnly(next http.Handler) http.Handler {
 		if ok && userID > 0 {
 			next.ServeHTTP(w, r)
 		} else {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			response.Forbidden(w)
 		}
 	})
 }

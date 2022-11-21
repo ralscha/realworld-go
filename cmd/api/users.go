@@ -3,7 +3,10 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/alexedwards/argon2id"
+	"github.com/gobuffalo/validate"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"net/http"
 	"realworldgo.rasc.ch/cmd/api/dto"
@@ -35,6 +38,7 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := models.Users(qm.Select(
 		models.UserColumns.Email,
+		models.UserColumns.Password,
 		models.UserColumns.Username,
 		models.UserColumns.Bio,
 		models.UserColumns.Image),
@@ -64,7 +68,11 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := ""
+	token, done := app.createToken(w, r, err, user.ID)
+	if done {
+		return
+	}
+
 	var userResponse = dto.UserWrapper{
 		User: dto.User{
 			Email:    user.Email,
@@ -78,10 +86,93 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, userResponse)
 }
 
+func (app *application) createToken(w http.ResponseWriter, r *http.Request, err error, userId int64) (string, bool) {
+	ctx, err := app.sessionManager.Load(r.Context(), "")
+	if err != nil {
+		response.ServerError(w, err)
+		return "", true
+	}
+	app.sessionManager.Put(ctx, "userID", userId)
+	token, _, err := app.sessionManager.Commit(ctx)
+	if err != nil {
+		response.ServerError(w, err)
+		return "", true
+	}
+	return token, false
+}
+
 func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request) {
 	var userLoginRequest dto.UserRequest
 	if ok := request.DecodeJSONValidate[*dto.UserRequest](w, r, &userLoginRequest, dto.ValidateUserRegistrationRequest); !ok {
 		return
 	}
+
+	usernameExists, err := models.Users(models.UserWhere.Username.EQ(userLoginRequest.User.Username)).Exists(r.Context(), app.db)
+	if err != nil {
+		response.ServerError(w, err)
+		return
+	}
+	if usernameExists {
+		validationError := validate.Errors{
+			Errors: map[string][]string{"username": {"exists"}},
+		}
+		response.FailedValidation(w, &validationError)
+		return
+	}
+
+	emailExists, err := models.Users(models.UserWhere.Email.EQ(userLoginRequest.User.Email)).Exists(r.Context(), app.db)
+	if err != nil {
+		response.ServerError(w, err)
+		return
+	}
+	if emailExists {
+		validationError := validate.Errors{
+			Errors: map[string][]string{"email": {"exists"}},
+		}
+		response.FailedValidation(w, &validationError)
+		return
+	}
+
+	hashedPassword, err := argon2id.CreateHash(userLoginRequest.User.Password, &argon2id.Params{
+		Memory:      app.config.Argon2.Memory,
+		Iterations:  app.config.Argon2.Iterations,
+		Parallelism: app.config.Argon2.Parallelism,
+		SaltLength:  app.config.Argon2.SaltLength,
+		KeyLength:   app.config.Argon2.KeyLength,
+	})
+	if err != nil {
+		response.ServerError(w, err)
+		return
+	}
+
+	newUser := models.User{
+		Username: userLoginRequest.User.Username,
+		Password: hashedPassword,
+		Email:    userLoginRequest.User.Email,
+	}
+
+	err = newUser.Insert(r.Context(), app.db, boil.Infer())
+	if err != nil {
+		response.ServerError(w, err)
+		return
+	}
+
+	fmt.Println("userID", newUser.ID)
+	token, done := app.createToken(w, r, err, newUser.ID)
+	if done {
+		return
+	}
+
+	var userResponse = dto.UserWrapper{
+		User: dto.User{
+			Email:    newUser.Email,
+			Token:    token,
+			Username: newUser.Username,
+			Bio:      newUser.Bio.String,
+			Image:    newUser.Image.String,
+		},
+	}
+
+	response.JSON(w, http.StatusCreated, userResponse)
 
 }
