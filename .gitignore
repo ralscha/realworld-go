@@ -2,3 +2,5 @@ bin
 db.sqlite
 .idea
 db.sqlite
+/migrate
+/.task/checksum/build-goose
