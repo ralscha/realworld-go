@@ -4,3 +4,4 @@ db.sqlite
 db.sqlite
 /migrate
 /.task/checksum/build-goose
+/migrate.exe

@@ -26,6 +26,13 @@ type Config struct {
 		WriteTimeoutInSeconds int64
 		IdleTimeoutInSeconds  int64
 	}
+	Argon2 struct {
+		Memory      uint32
+		Iterations  uint32
+		Parallelism uint8
+		SaltLength  uint32
+		KeyLength   uint32
+	}
 }
 
 func applyDefaults() {
@@ -38,6 +45,11 @@ func applyDefaults() {
 	viper.SetDefault("db.maxIdleTime", "15m")
 	viper.SetDefault("db.maxLifetime", "2h")
 	viper.SetDefault("secureCookie", true)
+	viper.SetDefault("argon2.memory", 1<<17)
+	viper.SetDefault("argon2.iterations", 20)
+	viper.SetDefault("argon2.parallelism", 8)
+	viper.SetDefault("argon2.saltLength", 16)
+	viper.SetDefault("argon2.keyLength", 32)
 }
 
 func LoadConfig() (Config, error) {

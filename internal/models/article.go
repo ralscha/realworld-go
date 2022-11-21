@@ -26,8 +26,8 @@ import (
 type Article struct {
 	ID          int64       `boil:"id" json:"id" toml:"id" yaml:"id"`
 	UserID      null.Int64  `boil:"user_id" json:"user_id,omitempty" toml:"user_id" yaml:"user_id,omitempty"`
-	Slug        null.String `boil:"slug" json:"slug,omitempty" toml:"slug" yaml:"slug,omitempty"`
-	Title       null.String `boil:"title" json:"title,omitempty" toml:"title" yaml:"title,omitempty"`
+	Slug        string      `boil:"slug" json:"slug" toml:"slug" yaml:"slug"`
+	Title       string      `boil:"title" json:"title" toml:"title" yaml:"title"`
 	Description null.String `boil:"description" json:"description,omitempty" toml:"description" yaml:"description,omitempty"`
 	Body        null.String `boil:"body" json:"body,omitempty" toml:"body" yaml:"body,omitempty"`
 	CreatedAt   string      `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
@@ -140,6 +140,29 @@ func (w whereHelpernull_Int64) NIN(slice []int64) qm.QueryMod {
 func (w whereHelpernull_Int64) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
 func (w whereHelpernull_Int64) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
+type whereHelperstring struct{ field string }
+
+func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperstring) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
 type whereHelpernull_String struct{ field string }
 
 func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
@@ -178,34 +201,11 @@ func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
 func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
 func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
-type whereHelperstring struct{ field string }
-
-func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperstring) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
 var ArticleWhere = struct {
 	ID          whereHelperint64
 	UserID      whereHelpernull_Int64
-	Slug        whereHelpernull_String
-	Title       whereHelpernull_String
+	Slug        whereHelperstring
+	Title       whereHelperstring
 	Description whereHelpernull_String
 	Body        whereHelpernull_String
 	CreatedAt   whereHelperstring
@@ -213,8 +213,8 @@ var ArticleWhere = struct {
 }{
 	ID:          whereHelperint64{field: "\"article\".\"id\""},
 	UserID:      whereHelpernull_Int64{field: "\"article\".\"user_id\""},
-	Slug:        whereHelpernull_String{field: "\"article\".\"slug\""},
-	Title:       whereHelpernull_String{field: "\"article\".\"title\""},
+	Slug:        whereHelperstring{field: "\"article\".\"slug\""},
+	Title:       whereHelperstring{field: "\"article\".\"title\""},
 	Description: whereHelpernull_String{field: "\"article\".\"description\""},
 	Body:        whereHelpernull_String{field: "\"article\".\"body\""},
 	CreatedAt:   whereHelperstring{field: "\"article\".\"created_at\""},
@@ -280,8 +280,8 @@ type articleL struct{}
 
 var (
 	articleAllColumns            = []string{"id", "user_id", "slug", "title", "description", "body", "created_at", "updated_at"}
-	articleColumnsWithoutDefault = []string{"created_at"}
-	articleColumnsWithDefault    = []string{"id", "user_id", "slug", "title", "description", "body", "updated_at"}
+	articleColumnsWithoutDefault = []string{"slug", "title", "created_at"}
+	articleColumnsWithDefault    = []string{"id", "user_id", "description", "body", "updated_at"}
 	articlePrimaryKeyColumns     = []string{"id"}
 	articleGeneratedColumns      = []string{"id"}
 )

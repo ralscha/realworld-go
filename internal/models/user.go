@@ -25,9 +25,9 @@ import (
 // User is an object representing the database table.
 type User struct {
 	ID       int64       `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Username null.String `boil:"username" json:"username,omitempty" toml:"username" yaml:"username,omitempty"`
-	Password null.String `boil:"password" json:"password,omitempty" toml:"password" yaml:"password,omitempty"`
-	Email    null.String `boil:"email" json:"email,omitempty" toml:"email" yaml:"email,omitempty"`
+	Username string      `boil:"username" json:"username" toml:"username" yaml:"username"`
+	Password string      `boil:"password" json:"password" toml:"password" yaml:"password"`
+	Email    string      `boil:"email" json:"email" toml:"email" yaml:"email"`
 	Bio      null.String `boil:"bio" json:"bio,omitempty" toml:"bio" yaml:"bio,omitempty"`
 	Image    null.String `boil:"image" json:"image,omitempty" toml:"image" yaml:"image,omitempty"`
 
@@ -71,16 +71,16 @@ var UserTableColumns = struct {
 
 var UserWhere = struct {
 	ID       whereHelperint64
-	Username whereHelpernull_String
-	Password whereHelpernull_String
-	Email    whereHelpernull_String
+	Username whereHelperstring
+	Password whereHelperstring
+	Email    whereHelperstring
 	Bio      whereHelpernull_String
 	Image    whereHelpernull_String
 }{
 	ID:       whereHelperint64{field: "\"user\".\"id\""},
-	Username: whereHelpernull_String{field: "\"user\".\"username\""},
-	Password: whereHelpernull_String{field: "\"user\".\"password\""},
-	Email:    whereHelpernull_String{field: "\"user\".\"email\""},
+	Username: whereHelperstring{field: "\"user\".\"username\""},
+	Password: whereHelperstring{field: "\"user\".\"password\""},
+	Email:    whereHelperstring{field: "\"user\".\"email\""},
 	Bio:      whereHelpernull_String{field: "\"user\".\"bio\""},
 	Image:    whereHelpernull_String{field: "\"user\".\"image\""},
 }
@@ -154,8 +154,8 @@ type userL struct{}
 
 var (
 	userAllColumns            = []string{"id", "username", "password", "email", "bio", "image"}
-	userColumnsWithoutDefault = []string{}
-	userColumnsWithDefault    = []string{"id", "username", "password", "email", "bio", "image"}
+	userColumnsWithoutDefault = []string{"username", "password", "email"}
+	userColumnsWithDefault    = []string{"id", "bio", "image"}
 	userPrimaryKeyColumns     = []string{"id"}
 	userGeneratedColumns      = []string{"id"}
 )

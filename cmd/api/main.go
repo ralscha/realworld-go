@@ -47,6 +47,12 @@ func main() {
 		_ = db.Close()
 	}(db)
 
+	err = initAuth(cfg)
+	if err != nil {
+		logger.Error("init auth failed", err)
+		os.Exit(1)
+	}
+
 	app := &application{
 		config: &cfg,
 		db:     db,

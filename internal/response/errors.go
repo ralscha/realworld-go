@@ -23,6 +23,16 @@ func NotFound(w http.ResponseWriter, _ *http.Request) {
 	errorMessage(w, http.StatusNotFound, message, nil)
 }
 
+func Unauthorized(w http.ResponseWriter) {
+	message := "Authentication is required to access this resource"
+	errorMessage(w, http.StatusUnauthorized, message, nil)
+}
+
+func Forbidden(w http.ResponseWriter) {
+	message := "You are not authorized to access this resource"
+	errorMessage(w, http.StatusForbidden, message, nil)
+}
+
 func MethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	message := fmt.Sprintf("The %s method is not supported for this resource", r.Method)
 	errorMessage(w, http.StatusMethodNotAllowed, message, nil)

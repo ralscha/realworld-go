@@ -13,13 +13,13 @@ import (
 
 const maxBytes = 1_048_576
 
-func DecodeJSONValidate(w http.ResponseWriter, r *http.Request, dst dto.Validatable) bool {
+func DecodeJSONValidate[T any](w http.ResponseWriter, r *http.Request, dst T, validate dto.ValidatorFn[T]) bool {
 	if err := DecodeJSON(w, r, dst); err != nil {
 		response.BadRequest(w, err)
 		return false
 	}
 
-	validationError := dst.Validate()
+	validationError := validate(dst)
 	if validationError.HasAny() {
 		response.FailedValidation(w, validationError)
 		return false

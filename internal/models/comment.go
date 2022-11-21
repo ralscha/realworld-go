@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,12 +23,12 @@ import (
 
 // Comment is an object representing the database table.
 type Comment struct {
-	ID        int64       `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Body      null.String `boil:"body" json:"body,omitempty" toml:"body" yaml:"body,omitempty"`
-	ArticleID int64       `boil:"article_id" json:"article_id" toml:"article_id" yaml:"article_id"`
-	UserID    int64       `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	CreatedAt string      `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt string      `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ID        int64  `boil:"id" json:"id" toml:"id" yaml:"id"`
+	Body      string `boil:"body" json:"body" toml:"body" yaml:"body"`
+	ArticleID int64  `boil:"article_id" json:"article_id" toml:"article_id" yaml:"article_id"`
+	UserID    int64  `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	CreatedAt string `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt string `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *commentR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L commentL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -71,14 +70,14 @@ var CommentTableColumns = struct {
 
 var CommentWhere = struct {
 	ID        whereHelperint64
-	Body      whereHelpernull_String
+	Body      whereHelperstring
 	ArticleID whereHelperint64
 	UserID    whereHelperint64
 	CreatedAt whereHelperstring
 	UpdatedAt whereHelperstring
 }{
 	ID:        whereHelperint64{field: "\"comment\".\"id\""},
-	Body:      whereHelpernull_String{field: "\"comment\".\"body\""},
+	Body:      whereHelperstring{field: "\"comment\".\"body\""},
 	ArticleID: whereHelperint64{field: "\"comment\".\"article_id\""},
 	UserID:    whereHelperint64{field: "\"comment\".\"user_id\""},
 	CreatedAt: whereHelperstring{field: "\"comment\".\"created_at\""},
@@ -124,8 +123,8 @@ type commentL struct{}
 
 var (
 	commentAllColumns            = []string{"id", "body", "article_id", "user_id", "created_at", "updated_at"}
-	commentColumnsWithoutDefault = []string{"article_id", "user_id", "created_at"}
-	commentColumnsWithDefault    = []string{"id", "body", "updated_at"}
+	commentColumnsWithoutDefault = []string{"body", "article_id", "user_id", "created_at"}
+	commentColumnsWithDefault    = []string{"id", "updated_at"}
 	commentPrimaryKeyColumns     = []string{"id"}
 	commentGeneratedColumns      = []string{"id"}
 )
