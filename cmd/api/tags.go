@@ -19,7 +19,7 @@ func (app *application) tagsGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i, tag := range tags {
-		tagsResponse.Tags[i] = tag.Tag
+		tagsResponse.Tags[i] = tag.Name
 	}
 
 	response.JSON(w, http.StatusOK, tagsResponse)

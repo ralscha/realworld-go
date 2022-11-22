@@ -86,11 +86,16 @@ func (app *application) profilesFollow(w http.ResponseWriter, r *http.Request) {
 		FollowID: user.ID,
 	}
 
-	err = newFollowing.Insert(r.Context(), app.db, boil.Infer())
+	err = newFollowing.Upsert(r.Context(), app.db, false, []string{models.FollowColumns.UserID, models.FollowColumns.FollowID},
+		boil.None(), boil.Infer())
 	if err != nil {
 		response.ServerError(w, err)
 		return
 	}
+
+	// INSERT INTO pilots ("id", "name") VALUES($1, $2)
+	// ON CONFLICT DO NOTHING
+	// err := p1.Upsert(ctx, db, false, nil, boil.Infer())
 
 	profile := dto.ProfileWrapper{
 		Profile: dto.Profile{
