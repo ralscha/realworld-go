@@ -22,6 +22,8 @@ type UserRequest struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		Bio      string `json:"bio"`
+		Image    string `json:"image"`
 	} `json:"user"`
 }
 
@@ -50,6 +52,21 @@ func ValidateUserRegistrationRequest(u *UserRequest) *validate.Errors {
 		&validators.StringIsPresent{
 			Name:    "password",
 			Field:   u.User.Password,
+			Message: "required",
+		},
+		&validators.StringIsPresent{
+			Name:    "username",
+			Field:   u.User.Username,
+			Message: "required",
+		},
+	)
+}
+
+func ValidateUserUpdateRequest(u *UserRequest) *validate.Errors {
+	return validate.Validate(
+		&validators.StringIsPresent{
+			Name:    "email",
+			Field:   u.User.Email,
 			Message: "required",
 		},
 		&validators.StringIsPresent{

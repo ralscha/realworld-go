@@ -30,6 +30,10 @@ func (app *application) routes() http.Handler {
 	mux.Route("/api", func(r chi.Router) {
 		r.Post("/users/login", app.usersLogin)
 		r.Post("/users", app.usersRegistration)
+		r.Get("/profiles/:username", app.profilesGet)
+		r.Get("/articles", app.articlesGet)
+		r.Get("/articles/:slug", app.articleGet)
+		r.Get("/tags", app.tagsGet)
 		r.Mount("/", app.authenticatedRouter())
 	})
 
@@ -40,6 +44,20 @@ func (app *application) authenticatedRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Use(app.sessionManager.LoadAndSaveHeader)
 	r.Use(app.authenticatedOnly)
+
+	r.Get("/user", app.usersGetCurrent)
+	r.Put("/user", app.usersUpdate)
+	r.Post("/profiles/:username/follow", app.profilesFollow)
+	r.Delete("/profiles/:username/follow", app.profilesUnfollow)
+	r.Get("/articles/feed", app.articlesFeed)
+	r.Post("/articles", app.articlesCreate)
+	r.Put("/articles/:slug", app.articlesUpdate)
+	r.Delete("/articles/:slug", app.articlesDelete)
+	r.Post("/articles/:slug/comments", app.articlesAddComment)
+	r.Get("/articles/:slug/comments", app.articlesGetComments)
+	r.Delete("/articles/:slug/comments/:id", app.articlesDeleteComment)
+	r.Post("/articles/:slug/favorite", app.articlesFavorite)
+	r.Delete("/articles/:slug/favorite", app.articlesUnfavorite)
 
 	return r
 }
