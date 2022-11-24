@@ -9,6 +9,7 @@ var TableNames = struct {
 	ArticleTag      string
 	Comment         string
 	Follow          string
+	Sessions        string
 	Tag             string
 	User            string
 }{
@@ -17,6 +18,7 @@ var TableNames = struct {
 	ArticleTag:      "article_tag",
 	Comment:         "comment",
 	Follow:          "follow",
+	Sessions:        "sessions",
 	Tag:             "tag",
 	User:            "user",
 }

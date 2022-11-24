@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,14 +23,14 @@ import (
 
 // Article is an object representing the database table.
 type Article struct {
-	ID          int64       `boil:"id" json:"id" toml:"id" yaml:"id"`
-	UserID      null.Int64  `boil:"user_id" json:"user_id,omitempty" toml:"user_id" yaml:"user_id,omitempty"`
-	Slug        string      `boil:"slug" json:"slug" toml:"slug" yaml:"slug"`
-	Title       string      `boil:"title" json:"title" toml:"title" yaml:"title"`
-	Description null.String `boil:"description" json:"description,omitempty" toml:"description" yaml:"description,omitempty"`
-	Body        null.String `boil:"body" json:"body,omitempty" toml:"body" yaml:"body,omitempty"`
-	CreatedAt   string      `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt   string      `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ID          int64  `boil:"id" json:"id" toml:"id" yaml:"id"`
+	UserID      int64  `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	Slug        string `boil:"slug" json:"slug" toml:"slug" yaml:"slug"`
+	Title       string `boil:"title" json:"title" toml:"title" yaml:"title"`
+	Description string `boil:"description" json:"description" toml:"description" yaml:"description"`
+	Body        string `boil:"body" json:"body" toml:"body" yaml:"body"`
+	CreatedAt   int64  `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt   int64  `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *articleR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L articleL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -102,44 +101,6 @@ func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
-type whereHelpernull_Int64 struct{ field string }
-
-func (w whereHelpernull_Int64) EQ(x null.Int64) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_Int64) NEQ(x null.Int64) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_Int64) LT(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_Int64) LTE(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_Int64) GT(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_Int64) GTE(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-func (w whereHelpernull_Int64) IN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelpernull_Int64) NIN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
-func (w whereHelpernull_Int64) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Int64) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 type whereHelperstring struct{ field string }
 
 func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
@@ -163,62 +124,24 @@ func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
-type whereHelpernull_String struct{ field string }
-
-func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-func (w whereHelpernull_String) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
-func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 var ArticleWhere = struct {
 	ID          whereHelperint64
-	UserID      whereHelpernull_Int64
+	UserID      whereHelperint64
 	Slug        whereHelperstring
 	Title       whereHelperstring
-	Description whereHelpernull_String
-	Body        whereHelpernull_String
-	CreatedAt   whereHelperstring
-	UpdatedAt   whereHelperstring
+	Description whereHelperstring
+	Body        whereHelperstring
+	CreatedAt   whereHelperint64
+	UpdatedAt   whereHelperint64
 }{
 	ID:          whereHelperint64{field: "\"article\".\"id\""},
-	UserID:      whereHelpernull_Int64{field: "\"article\".\"user_id\""},
+	UserID:      whereHelperint64{field: "\"article\".\"user_id\""},
 	Slug:        whereHelperstring{field: "\"article\".\"slug\""},
 	Title:       whereHelperstring{field: "\"article\".\"title\""},
-	Description: whereHelpernull_String{field: "\"article\".\"description\""},
-	Body:        whereHelpernull_String{field: "\"article\".\"body\""},
-	CreatedAt:   whereHelperstring{field: "\"article\".\"created_at\""},
-	UpdatedAt:   whereHelperstring{field: "\"article\".\"updated_at\""},
+	Description: whereHelperstring{field: "\"article\".\"description\""},
+	Body:        whereHelperstring{field: "\"article\".\"body\""},
+	CreatedAt:   whereHelperint64{field: "\"article\".\"created_at\""},
+	UpdatedAt:   whereHelperint64{field: "\"article\".\"updated_at\""},
 }
 
 // ArticleRels is where relationship names are stored.
@@ -280,8 +203,8 @@ type articleL struct{}
 
 var (
 	articleAllColumns            = []string{"id", "user_id", "slug", "title", "description", "body", "created_at", "updated_at"}
-	articleColumnsWithoutDefault = []string{"slug", "title", "created_at"}
-	articleColumnsWithDefault    = []string{"id", "user_id", "description", "body", "updated_at"}
+	articleColumnsWithoutDefault = []string{"user_id", "slug", "title", "description", "body", "created_at"}
+	articleColumnsWithDefault    = []string{"id", "updated_at"}
 	articlePrimaryKeyColumns     = []string{"id"}
 	articleGeneratedColumns      = []string{"id"}
 )
@@ -463,9 +386,7 @@ func (articleL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 		if object.R == nil {
 			object.R = &articleR{}
 		}
-		if !queries.IsNil(object.UserID) {
-			args = append(args, object.UserID)
-		}
+		args = append(args, object.UserID)
 
 	} else {
 	Outer:
@@ -475,14 +396,12 @@ func (articleL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 			}
 
 			for _, a := range args {
-				if queries.Equal(a, obj.UserID) {
+				if a == obj.UserID {
 					continue Outer
 				}
 			}
 
-			if !queries.IsNil(obj.UserID) {
-				args = append(args, obj.UserID)
-			}
+			args = append(args, obj.UserID)
 
 		}
 	}
@@ -532,7 +451,7 @@ func (articleL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if queries.Equal(local.UserID, foreign.ID) {
+			if local.UserID == foreign.ID {
 				local.R.User = foreign
 				if foreign.R == nil {
 					foreign.R = &userR{}
@@ -894,7 +813,7 @@ func (o *Article) SetUser(ctx context.Context, exec boil.ContextExecutor, insert
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	queries.Assign(&o.UserID, related.ID)
+	o.UserID = related.ID
 	if o.R == nil {
 		o.R = &articleR{
 			User: related,
@@ -911,39 +830,6 @@ func (o *Article) SetUser(ctx context.Context, exec boil.ContextExecutor, insert
 		related.R.Articles = append(related.R.Articles, o)
 	}
 
-	return nil
-}
-
-// RemoveUser relationship.
-// Sets o.R.User to nil.
-// Removes o from all passed in related items' relationships struct.
-func (o *Article) RemoveUser(ctx context.Context, exec boil.ContextExecutor, related *User) error {
-	var err error
-
-	queries.SetScanner(&o.UserID, nil)
-	if err = o.Update(ctx, exec, boil.Whitelist("user_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.User = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.Articles {
-		if queries.Equal(o.UserID, ri.UserID) {
-			continue
-		}
-
-		ln := len(related.R.Articles)
-		if ln > 1 && i < ln-1 {
-			related.R.Articles[i] = related.R.Articles[ln-1]
-		}
-		related.R.Articles = related.R.Articles[:ln-1]
-		break
-	}
 	return nil
 }
 

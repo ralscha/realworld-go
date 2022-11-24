@@ -93,10 +93,6 @@ func (app *application) profilesFollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT INTO pilots ("id", "name") VALUES($1, $2)
-	// ON CONFLICT DO NOTHING
-	// err := p1.Upsert(ctx, db, false, nil, boil.Infer())
-
 	profile := dto.ProfileWrapper{
 		Profile: dto.Profile{
 			Username:  user.Username,

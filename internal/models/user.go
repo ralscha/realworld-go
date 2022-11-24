@@ -363,7 +363,7 @@ func (userL) LoadArticles(ctx context.Context, e boil.ContextExecutor, singular 
 			}
 
 			for _, a := range args {
-				if queries.Equal(a, obj.ID) {
+				if a == obj.ID {
 					continue Outer
 				}
 			}
@@ -414,7 +414,7 @@ func (userL) LoadArticles(ctx context.Context, e boil.ContextExecutor, singular 
 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if queries.Equal(local.ID, foreign.UserID) {
+			if local.ID == foreign.UserID {
 				local.R.Articles = append(local.R.Articles, foreign)
 				if foreign.R == nil {
 					foreign.R = &articleR{}
@@ -864,7 +864,7 @@ func (o *User) AddArticles(ctx context.Context, exec boil.ContextExecutor, inser
 	var err error
 	for _, rel := range related {
 		if insert {
-			queries.Assign(&rel.UserID, o.ID)
+			rel.UserID = o.ID
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
@@ -885,7 +885,7 @@ func (o *User) AddArticles(ctx context.Context, exec boil.ContextExecutor, inser
 				return errors.Wrap(err, "failed to update foreign table")
 			}
 
-			queries.Assign(&rel.UserID, o.ID)
+			rel.UserID = o.ID
 		}
 	}
 
@@ -906,80 +906,6 @@ func (o *User) AddArticles(ctx context.Context, exec boil.ContextExecutor, inser
 			rel.R.User = o
 		}
 	}
-	return nil
-}
-
-// SetArticles removes all previously related items of the
-// user replacing them completely with the passed
-// in related items, optionally inserting them as new records.
-// Sets o.R.User's Articles accordingly.
-// Replaces o.R.Articles with related.
-// Sets related.R.User's Articles accordingly.
-func (o *User) SetArticles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Article) error {
-	query := "update \"article\" set \"user_id\" = null where \"user_id\" = ?"
-	values := []interface{}{o.ID}
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, query)
-		fmt.Fprintln(writer, values)
-	}
-	_, err := exec.ExecContext(ctx, query, values...)
-	if err != nil {
-		return errors.Wrap(err, "failed to remove relationships before set")
-	}
-
-	if o.R != nil {
-		for _, rel := range o.R.Articles {
-			queries.SetScanner(&rel.UserID, nil)
-			if rel.R == nil {
-				continue
-			}
-
-			rel.R.User = nil
-		}
-		o.R.Articles = nil
-	}
-
-	return o.AddArticles(ctx, exec, insert, related...)
-}
-
-// RemoveArticles relationships from objects passed in.
-// Removes related items from R.Articles (uses pointer comparison, removal does not keep order)
-// Sets related.R.User.
-func (o *User) RemoveArticles(ctx context.Context, exec boil.ContextExecutor, related ...*Article) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	for _, rel := range related {
-		queries.SetScanner(&rel.UserID, nil)
-		if rel.R != nil {
-			rel.R.User = nil
-		}
-		if err = rel.Update(ctx, exec, boil.Whitelist("user_id")); err != nil {
-			return err
-		}
-	}
-	if o.R == nil {
-		return nil
-	}
-
-	for _, rel := range related {
-		for i, ri := range o.R.Articles {
-			if rel != ri {
-				continue
-			}
-
-			ln := len(o.R.Articles)
-			if ln > 1 && i < ln-1 {
-				o.R.Articles[i] = o.R.Articles[ln-1]
-			}
-			o.R.Articles = o.R.Articles[:ln-1]
-			break
-		}
-	}
-
 	return nil
 }
 

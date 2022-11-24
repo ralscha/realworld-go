@@ -47,6 +47,7 @@ tasks:
       - CGO_ENABLED=1 go build -o ./migrate{{.SUFFIX}} realworldgo.rasc.ch/cmd/migrate
     sources:
       - ./cmd/migrate/*.go
+      - ./migrations/*.sql
     generates:
       - ./migrate{{.SUFFIX}}
 

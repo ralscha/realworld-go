@@ -31,7 +31,7 @@ func (app *application) routes() http.Handler {
 		r.Post("/users/login", app.usersLogin)
 		r.Post("/users", app.usersRegistration)
 		r.Get("/profiles/:username", app.profilesGet)
-		r.Get("/articles", app.articlesGet)
+		r.Get("/articles", app.articlesList)
 		r.Get("/articles/:slug", app.articleGet)
 		r.Get("/tags", app.tagsGet)
 		r.Mount("/", app.authenticatedRouter())

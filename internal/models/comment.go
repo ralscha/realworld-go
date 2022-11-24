@@ -27,8 +27,8 @@ type Comment struct {
 	Body      string `boil:"body" json:"body" toml:"body" yaml:"body"`
 	ArticleID int64  `boil:"article_id" json:"article_id" toml:"article_id" yaml:"article_id"`
 	UserID    int64  `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	CreatedAt string `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt string `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	CreatedAt int64  `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt int64  `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *commentR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L commentL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -73,15 +73,15 @@ var CommentWhere = struct {
 	Body      whereHelperstring
 	ArticleID whereHelperint64
 	UserID    whereHelperint64
-	CreatedAt whereHelperstring
-	UpdatedAt whereHelperstring
+	CreatedAt whereHelperint64
+	UpdatedAt whereHelperint64
 }{
 	ID:        whereHelperint64{field: "\"comment\".\"id\""},
 	Body:      whereHelperstring{field: "\"comment\".\"body\""},
 	ArticleID: whereHelperint64{field: "\"comment\".\"article_id\""},
 	UserID:    whereHelperint64{field: "\"comment\".\"user_id\""},
-	CreatedAt: whereHelperstring{field: "\"comment\".\"created_at\""},
-	UpdatedAt: whereHelperstring{field: "\"comment\".\"updated_at\""},
+	CreatedAt: whereHelperint64{field: "\"comment\".\"created_at\""},
+	UpdatedAt: whereHelperint64{field: "\"comment\".\"updated_at\""},
 }
 
 // CommentRels is where relationship names are stored.
