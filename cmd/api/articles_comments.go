@@ -16,40 +16,41 @@ import (
 )
 
 func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	var commentRequest dto.CommentRequest
 	if ok := request.DecodeJSONValidate[*dto.CommentRequest](w, r, &commentRequest, dto.ValidateCommentRequest); !ok {
 		return
 	}
 
 	articleSlug := chi.URLParam(r, "slug")
-	article, err := models.Articles(qm.Select(models.ArticleColumns.ID, models.ArticleColumns.UserID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), app.db)
+	article, err := models.Articles(qm.Select(models.ArticleColumns.ID, models.ArticleColumns.UserID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
-	epochSeconds := time.Now().Unix()
+	now := time.Now()
 	comment := models.Comment{
 		Body:      commentRequest.Comment.Body,
 		ArticleID: article.ID,
 		UserID:    userID,
-		CreatedAt: epochSeconds,
-		UpdatedAt: epochSeconds,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
-	if err := comment.Insert(r.Context(), app.db, boil.Infer()); err != nil {
-		response.ServerError(w, err)
+	if err := comment.Insert(r.Context(), tx, boil.Infer()); err != nil {
+		response.InternalServerError(w, err)
 		return
 	}
 
-	user, err := models.Users(qm.Select(models.UserColumns.Username, models.UserColumns.Bio, models.UserColumns.Image), models.UserWhere.ID.EQ(article.UserID)).One(r.Context(), app.db)
+	user, err := models.AppUsers(qm.Select(models.AppUserColumns.Username, models.AppUserColumns.Bio, models.AppUserColumns.Image), models.AppUserWhere.ID.EQ(article.UserID)).One(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 	profile := dto.Profile{
@@ -60,8 +61,8 @@ func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Reques
 	}
 	insertedComment := dto.Comment{
 		ID:        comment.ID,
-		CreatedAt: time.Unix(comment.CreatedAt, 1).UTC().Format(time.RFC3339Nano),
-		UpdatedAt: time.Unix(comment.UpdatedAt, 1).UTC().Format(time.RFC3339Nano),
+		CreatedAt: comment.CreatedAt.UTC().Format(time.RFC3339Nano),
+		UpdatedAt: comment.UpdatedAt.UTC().Format(time.RFC3339Nano),
 		Body:      comment.Body,
 		Author:    profile,
 	}
@@ -70,6 +71,7 @@ func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Request) {
+	tx := r.Context().Value("tx").(*sql.Tx)
 	authentiated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
@@ -79,27 +81,27 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 
 	articleSlug := chi.URLParam(r, "slug")
 
-	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), app.db)
+	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
-	comments, err := article.Comments(qm.Load(models.CommentRels.User)).All(r.Context(), app.db)
+	comments, err := article.Comments(qm.Load(models.CommentRels.User)).All(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
 	var followingIds models.FollowSlice
 	if authentiated {
-		followingIds, err = models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), app.db)
+		followingIds, err = models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), tx)
 		if err != nil {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 			return
 		}
 	}
@@ -119,8 +121,8 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 		}
 		commentsResponse = append(commentsResponse, dto.Comment{
 			ID:        comment.ID,
-			CreatedAt: time.Unix(comment.CreatedAt, 1).UTC().Format(time.RFC3339Nano),
-			UpdatedAt: time.Unix(comment.UpdatedAt, 1).UTC().Format(time.RFC3339Nano),
+			CreatedAt: comment.CreatedAt.UTC().Format(time.RFC3339Nano),
+			UpdatedAt: comment.UpdatedAt.UTC().Format(time.RFC3339Nano),
 			Body:      comment.Body,
 			Author:    profile,
 		})
@@ -130,7 +132,8 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *application) articlesDeleteComment(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 	commentID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
@@ -138,28 +141,28 @@ func (app *application) articlesDeleteComment(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), app.db)
+	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
-	comment, err := article.Comments(models.CommentWhere.ID.EQ(int64(commentID)), models.CommentWhere.UserID.EQ(userID)).One(r.Context(), app.db)
+	comment, err := article.Comments(models.CommentWhere.ID.EQ(int64(commentID)), models.CommentWhere.UserID.EQ(userID)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
-	if err := comment.Delete(r.Context(), app.db); err != nil {
-		response.ServerError(w, err)
+	if err := comment.Delete(r.Context(), tx); err != nil {
+		response.InternalServerError(w, err)
 		return
 	}
 

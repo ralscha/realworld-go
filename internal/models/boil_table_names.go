@@ -4,6 +4,7 @@
 package models
 
 var TableNames = struct {
+	AppUser         string
 	Article         string
 	ArticleFavorite string
 	ArticleTag      string
@@ -11,8 +12,8 @@ var TableNames = struct {
 	Follow          string
 	Sessions        string
 	Tag             string
-	User            string
 }{
+	AppUser:         "app_user",
 	Article:         "article",
 	ArticleFavorite: "article_favorite",
 	ArticleTag:      "article_tag",
@@ -20,5 +21,4 @@ var TableNames = struct {
 	Follow:          "follow",
 	Sessions:        "sessions",
 	Tag:             "tag",
-	User:            "user",
 }

@@ -13,15 +13,16 @@ import (
 )
 
 func (app *application) articlesFavorite(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 
-	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), app.db)
+	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
@@ -31,15 +32,15 @@ func (app *application) articlesFavorite(w http.ResponseWriter, r *http.Request)
 		ArticleID: article.ID,
 	}
 
-	err = newFavorite.Upsert(r.Context(), app.db, false, []string{models.ArticleFavoriteColumns.UserID, models.ArticleFavoriteColumns.ArticleID}, boil.None(), boil.Infer())
+	err = newFavorite.Upsert(r.Context(), tx, false, []string{models.ArticleFavoriteColumns.UserID, models.ArticleFavoriteColumns.ArticleID}, boil.None(), boil.Infer())
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
 	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -47,28 +48,29 @@ func (app *application) articlesFavorite(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *application) articlesUnfavorite(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 
-	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), app.db)
+	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
-	err = models.ArticleFavorites(models.ArticleFavoriteWhere.UserID.EQ(userID), models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).DeleteAll(r.Context(), app.db)
+	err = models.ArticleFavorites(models.ArticleFavoriteWhere.UserID.EQ(userID), models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).DeleteAll(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
 	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 

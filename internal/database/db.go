@@ -3,14 +3,14 @@ package database
 import (
 	"context"
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"realworldgo.rasc.ch/internal/config"
 	"time"
 )
 
 func New(cfg config.Config) (*sql.DB, error) {
-
-	db, err := sql.Open("sqlite3", cfg.DB.Dsn)
+	dsn := "postgres://" + cfg.DB.User + ":" + cfg.DB.Password + "@" + cfg.DB.Connection + "/" + cfg.DB.Database
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}

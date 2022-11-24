@@ -14,7 +14,10 @@ const (
 type Config struct {
 	Environment Environment
 	DB          struct {
-		Dsn          string
+		User         string
+		Password     string
+		Connection   string
+		Database     string
 		MaxOpenConns int
 		MaxIdleConns int
 		MaxIdleTime  string
@@ -40,8 +43,8 @@ func applyDefaults() {
 	viper.SetDefault("http.readTimeoutInSeconds", 30)
 	viper.SetDefault("http.writeTimeoutInSeconds", 30)
 	viper.SetDefault("http.idleTimeoutInSeconds", 120)
-	viper.SetDefault("db.maxOpenConns", 25)
-	viper.SetDefault("db.maxIdleConns", 25)
+	viper.SetDefault("db.maxOpenConns", 4)
+	viper.SetDefault("db.maxIdleConns", 2)
 	viper.SetDefault("db.maxIdleTime", "15m")
 	viper.SetDefault("db.maxLifetime", "2h")
 	viper.SetDefault("secureCookie", true)

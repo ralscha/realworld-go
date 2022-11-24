@@ -44,7 +44,7 @@ tasks:
 
   build-goose:
     cmds:
-      - CGO_ENABLED=1 go build -o ./migrate{{.SUFFIX}} realworldgo.rasc.ch/cmd/migrate
+      - go build -o ./migrate{{.SUFFIX}} realworldgo.rasc.ch/cmd/migrate
     sources:
       - ./cmd/migrate/*.go
       - ./migrations/*.sql

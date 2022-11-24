@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"realworldgo.rasc.ch/cmd/api/dto"
 	"realworldgo.rasc.ch/internal/models"
@@ -8,9 +9,10 @@ import (
 )
 
 func (app *application) tagsGet(w http.ResponseWriter, r *http.Request) {
-	tags, err := models.Tags().All(r.Context(), app.db)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	tags, err := models.Tags().All(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 

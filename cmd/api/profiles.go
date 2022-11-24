@@ -13,6 +13,7 @@ import (
 )
 
 func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
+	tx := r.Context().Value("tx").(*sql.Tx)
 	authentiated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
@@ -22,18 +23,18 @@ func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
 
 	username := chi.URLParam(r, "username")
 
-	user, err := models.Users(qm.Select(
-		models.UserColumns.ID,
-		models.UserColumns.Username,
-		models.UserColumns.Bio,
-		models.UserColumns.Image),
-		models.UserWhere.Username.EQ(username)).One(r.Context(), app.db)
+	user, err := models.AppUsers(qm.Select(
+		models.AppUserColumns.ID,
+		models.AppUserColumns.Username,
+		models.AppUserColumns.Bio,
+		models.AppUserColumns.Image),
+		models.AppUserWhere.Username.EQ(username)).One(r.Context(), tx)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
@@ -42,10 +43,10 @@ func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
 
 	if authentiated {
 		following, err = models.Follows(models.FollowWhere.UserID.EQ(userID), models.FollowWhere.FollowID.EQ(user.ID)).
-			Exists(r.Context(), app.db)
+			Exists(r.Context(), tx)
 
 		if err != nil {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 			return
 		}
 	}
@@ -63,21 +64,22 @@ func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) profilesFollow(w http.ResponseWriter, r *http.Request) {
+	tx := r.Context().Value("tx").(*sql.Tx)
 	username := chi.URLParam(r, "username")
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 
-	user, err := models.Users(qm.Select(
-		models.UserColumns.ID,
-		models.UserColumns.Username,
-		models.UserColumns.Bio,
-		models.UserColumns.Image),
-		models.UserWhere.Username.EQ(username)).One(r.Context(), app.db)
+	user, err := models.AppUsers(qm.Select(
+		models.AppUserColumns.ID,
+		models.AppUserColumns.Username,
+		models.AppUserColumns.Bio,
+		models.AppUserColumns.Image),
+		models.AppUserWhere.Username.EQ(username)).One(r.Context(), tx)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
@@ -87,10 +89,10 @@ func (app *application) profilesFollow(w http.ResponseWriter, r *http.Request) {
 		FollowID: user.ID,
 	}
 
-	err = newFollowing.Upsert(r.Context(), app.db, false, []string{models.FollowColumns.UserID, models.FollowColumns.FollowID},
+	err = newFollowing.Upsert(r.Context(), tx, false, []string{models.FollowColumns.UserID, models.FollowColumns.FollowID},
 		boil.None(), boil.Infer())
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -107,28 +109,29 @@ func (app *application) profilesFollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) profilesUnfollow(w http.ResponseWriter, r *http.Request) {
+	tx := r.Context().Value("tx").(*sql.Tx)
 	username := chi.URLParam(r, "username")
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 
-	user, err := models.Users(qm.Select(
-		models.UserColumns.ID,
-		models.UserColumns.Username,
-		models.UserColumns.Bio,
-		models.UserColumns.Image),
-		models.UserWhere.Username.EQ(username)).One(r.Context(), app.db)
+	user, err := models.AppUsers(qm.Select(
+		models.AppUserColumns.ID,
+		models.AppUserColumns.Username,
+		models.AppUserColumns.Bio,
+		models.AppUserColumns.Image),
+		models.AppUserWhere.Username.EQ(username)).One(r.Context(), tx)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
-	err = models.Follows(models.FollowWhere.UserID.EQ(userID), models.FollowWhere.FollowID.EQ(user.ID)).DeleteAll(r.Context(), app.db)
+	err = models.Follows(models.FollowWhere.UserID.EQ(userID), models.FollowWhere.FollowID.EQ(user.ID)).DeleteAll(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 

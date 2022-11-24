@@ -23,12 +23,12 @@ import (
 
 // Comment is an object representing the database table.
 type Comment struct {
-	ID        int64  `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Body      string `boil:"body" json:"body" toml:"body" yaml:"body"`
-	ArticleID int64  `boil:"article_id" json:"article_id" toml:"article_id" yaml:"article_id"`
-	UserID    int64  `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	CreatedAt int64  `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt int64  `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ID        int64     `boil:"id" json:"id" toml:"id" yaml:"id"`
+	Body      string    `boil:"body" json:"body" toml:"body" yaml:"body"`
+	ArticleID int64     `boil:"article_id" json:"article_id" toml:"article_id" yaml:"article_id"`
+	UserID    int64     `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	CreatedAt time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *commentR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L commentL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -73,15 +73,15 @@ var CommentWhere = struct {
 	Body      whereHelperstring
 	ArticleID whereHelperint64
 	UserID    whereHelperint64
-	CreatedAt whereHelperint64
-	UpdatedAt whereHelperint64
+	CreatedAt whereHelpertime_Time
+	UpdatedAt whereHelpertime_Time
 }{
 	ID:        whereHelperint64{field: "\"comment\".\"id\""},
 	Body:      whereHelperstring{field: "\"comment\".\"body\""},
 	ArticleID: whereHelperint64{field: "\"comment\".\"article_id\""},
 	UserID:    whereHelperint64{field: "\"comment\".\"user_id\""},
-	CreatedAt: whereHelperint64{field: "\"comment\".\"created_at\""},
-	UpdatedAt: whereHelperint64{field: "\"comment\".\"updated_at\""},
+	CreatedAt: whereHelpertime_Time{field: "\"comment\".\"created_at\""},
+	UpdatedAt: whereHelpertime_Time{field: "\"comment\".\"updated_at\""},
 }
 
 // CommentRels is where relationship names are stored.
@@ -96,7 +96,7 @@ var CommentRels = struct {
 // commentR is where relationships are stored.
 type commentR struct {
 	Article *Article `boil:"Article" json:"Article" toml:"Article" yaml:"Article"`
-	User    *User    `boil:"User" json:"User" toml:"User" yaml:"User"`
+	User    *AppUser `boil:"User" json:"User" toml:"User" yaml:"User"`
 }
 
 // NewStruct creates a new relationship struct
@@ -111,7 +111,7 @@ func (r *commentR) GetArticle() *Article {
 	return r.Article
 }
 
-func (r *commentR) GetUser() *User {
+func (r *commentR) GetUser() *AppUser {
 	if r == nil {
 		return nil
 	}
@@ -123,10 +123,10 @@ type commentL struct{}
 
 var (
 	commentAllColumns            = []string{"id", "body", "article_id", "user_id", "created_at", "updated_at"}
-	commentColumnsWithoutDefault = []string{"body", "article_id", "user_id", "created_at"}
-	commentColumnsWithDefault    = []string{"id", "updated_at"}
+	commentColumnsWithoutDefault = []string{"body", "article_id", "user_id", "created_at", "updated_at"}
+	commentColumnsWithDefault    = []string{"id"}
 	commentPrimaryKeyColumns     = []string{"id"}
-	commentGeneratedColumns      = []string{"id"}
+	commentGeneratedColumns      = []string{}
 )
 
 type (
@@ -232,14 +232,14 @@ func (o *Comment) Article(mods ...qm.QueryMod) articleQuery {
 }
 
 // User pointed to by the foreign key.
-func (o *Comment) User(mods ...qm.QueryMod) userQuery {
+func (o *Comment) User(mods ...qm.QueryMod) appUserQuery {
 	queryMods := []qm.QueryMod{
 		qm.Where("\"id\" = ?", o.UserID),
 	}
 
 	queryMods = append(queryMods, mods...)
 
-	return Users(queryMods...)
+	return AppUsers(queryMods...)
 }
 
 // LoadArticle allows an eager lookup of values, cached into the
@@ -412,8 +412,8 @@ func (commentL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 	}
 
 	query := NewQuery(
-		qm.From(`user`),
-		qm.WhereIn(`user.id in ?`, args...),
+		qm.From(`app_user`),
+		qm.WhereIn(`app_user.id in ?`, args...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -421,19 +421,19 @@ func (commentL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load User")
+		return errors.Wrap(err, "failed to eager load AppUser")
 	}
 
-	var resultSlice []*User
+	var resultSlice []*AppUser
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice User")
+		return errors.Wrap(err, "failed to bind eager loaded slice AppUser")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for user")
+		return errors.Wrap(err, "failed to close results of eager load for app_user")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for app_user")
 	}
 
 	if len(resultSlice) == 0 {
@@ -444,9 +444,9 @@ func (commentL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 		foreign := resultSlice[0]
 		object.R.User = foreign
 		if foreign.R == nil {
-			foreign.R = &userR{}
+			foreign.R = &appUserR{}
 		}
-		foreign.R.Comments = append(foreign.R.Comments, object)
+		foreign.R.UserComments = append(foreign.R.UserComments, object)
 		return nil
 	}
 
@@ -455,9 +455,9 @@ func (commentL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 			if local.UserID == foreign.ID {
 				local.R.User = foreign
 				if foreign.R == nil {
-					foreign.R = &userR{}
+					foreign.R = &appUserR{}
 				}
-				foreign.R.Comments = append(foreign.R.Comments, local)
+				foreign.R.UserComments = append(foreign.R.UserComments, local)
 				break
 			}
 		}
@@ -479,8 +479,8 @@ func (o *Comment) SetArticle(ctx context.Context, exec boil.ContextExecutor, ins
 
 	updateQuery := fmt.Sprintf(
 		"UPDATE \"comment\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, []string{"article_id"}),
-		strmangle.WhereClause("\"", "\"", 0, commentPrimaryKeyColumns),
+		strmangle.SetParamNames("\"", "\"", 1, []string{"article_id"}),
+		strmangle.WhereClause("\"", "\"", 2, commentPrimaryKeyColumns),
 	)
 	values := []interface{}{related.ID, o.ID}
 
@@ -515,8 +515,8 @@ func (o *Comment) SetArticle(ctx context.Context, exec boil.ContextExecutor, ins
 
 // SetUser of the comment to the related item.
 // Sets o.R.User to related.
-// Adds o to related.R.Comments.
-func (o *Comment) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *User) error {
+// Adds o to related.R.UserComments.
+func (o *Comment) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AppUser) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -526,8 +526,8 @@ func (o *Comment) SetUser(ctx context.Context, exec boil.ContextExecutor, insert
 
 	updateQuery := fmt.Sprintf(
 		"UPDATE \"comment\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, []string{"user_id"}),
-		strmangle.WhereClause("\"", "\"", 0, commentPrimaryKeyColumns),
+		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+		strmangle.WhereClause("\"", "\"", 2, commentPrimaryKeyColumns),
 	)
 	values := []interface{}{related.ID, o.ID}
 
@@ -550,11 +550,11 @@ func (o *Comment) SetUser(ctx context.Context, exec boil.ContextExecutor, insert
 	}
 
 	if related.R == nil {
-		related.R = &userR{
-			Comments: CommentSlice{o},
+		related.R = &appUserR{
+			UserComments: CommentSlice{o},
 		}
 	} else {
-		related.R.Comments = append(related.R.Comments, o)
+		related.R.UserComments = append(related.R.UserComments, o)
 	}
 
 	return nil
@@ -581,7 +581,7 @@ func FindComment(ctx context.Context, exec boil.ContextExecutor, iD int64, selec
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"comment\" where \"id\"=?", sel,
+		"select %s from \"comment\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -620,7 +620,6 @@ func (o *Comment) Insert(ctx context.Context, exec boil.ContextExecutor, columns
 			commentColumnsWithoutDefault,
 			nzDefaults,
 		)
-		wl = strmangle.SetComplement(wl, commentGeneratedColumns)
 
 		cache.valueMapping, err = queries.BindMapping(commentType, commentMapping, wl)
 		if err != nil {
@@ -688,15 +687,13 @@ func (o *Comment) Update(ctx context.Context, exec boil.ContextExecutor, columns
 			commentAllColumns,
 			commentPrimaryKeyColumns,
 		)
-		wl = strmangle.SetComplement(wl, commentGeneratedColumns)
-
 		if len(wl) == 0 {
 			return errors.New("models: unable to update comment, could not build whitelist")
 		}
 
 		cache.query = fmt.Sprintf("UPDATE \"comment\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 0, wl),
-			strmangle.WhereClause("\"", "\"", 0, commentPrimaryKeyColumns),
+			strmangle.SetParamNames("\"", "\"", 1, wl),
+			strmangle.WhereClause("\"", "\"", len(wl)+1, commentPrimaryKeyColumns),
 		)
 		cache.valueMapping, err = queries.BindMapping(commentType, commentMapping, append(wl, commentPrimaryKeyColumns...))
 		if err != nil {
@@ -765,8 +762,8 @@ func (o CommentSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 	}
 
 	sql := fmt.Sprintf("UPDATE \"comment\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, colNames),
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, commentPrimaryKeyColumns, len(o)))
+		strmangle.SetParamNames("\"", "\"", 1, colNames),
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, commentPrimaryKeyColumns, len(o)))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -831,6 +828,7 @@ func (o *Comment) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 			commentColumnsWithoutDefault,
 			nzDefaults,
 		)
+
 		update := updateColumns.UpdateColumnSet(
 			commentAllColumns,
 			commentPrimaryKeyColumns,
@@ -845,7 +843,7 @@ func (o *Comment) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 			conflict = make([]string, len(commentPrimaryKeyColumns))
 			copy(conflict, commentPrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQuerySQLite(dialect, "\"comment\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"comment\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(commentType, commentMapping, insert)
 		if err != nil {
@@ -900,7 +898,7 @@ func (o *Comment) Delete(ctx context.Context, exec boil.ContextExecutor) error {
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), commentPrimaryKeyMapping)
-	sql := "DELETE FROM \"comment\" WHERE \"id\"=?"
+	sql := "DELETE FROM \"comment\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -944,7 +942,7 @@ func (o CommentSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 	}
 
 	sql := "DELETE FROM \"comment\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, commentPrimaryKeyColumns, len(o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, commentPrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -986,7 +984,7 @@ func (o *CommentSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 	}
 
 	sql := "SELECT \"comment\".* FROM \"comment\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, commentPrimaryKeyColumns, len(*o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, commentPrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
 
@@ -1003,7 +1001,7 @@ func (o *CommentSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 // CommentExists checks if the Comment row exists.
 func CommentExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"comment\" where \"id\"=? limit 1)"
+	sql := "select exists(select 1 from \"comment\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)

@@ -22,8 +22,8 @@ import (
 	"github.com/volatiletech/strmangle"
 )
 
-// User is an object representing the database table.
-type User struct {
+// AppUser is an object representing the database table.
+type AppUser struct {
 	ID       int64       `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Username string      `boil:"username" json:"username" toml:"username" yaml:"username"`
 	Password string      `boil:"password" json:"password" toml:"password" yaml:"password"`
@@ -31,11 +31,11 @@ type User struct {
 	Bio      null.String `boil:"bio" json:"bio,omitempty" toml:"bio" yaml:"bio,omitempty"`
 	Image    null.String `boil:"image" json:"image,omitempty" toml:"image" yaml:"image,omitempty"`
 
-	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
-	L userL  `boil:"-" json:"-" toml:"-" yaml:"-"`
+	R *appUserR `boil:"-" json:"-" toml:"-" yaml:"-"`
+	L appUserL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
-var UserColumns = struct {
+var AppUserColumns = struct {
 	ID       string
 	Username string
 	Password string
@@ -51,7 +51,7 @@ var UserColumns = struct {
 	Image:    "image",
 }
 
-var UserTableColumns = struct {
+var AppUserTableColumns = struct {
 	ID       string
 	Username string
 	Password string
@@ -59,17 +59,101 @@ var UserTableColumns = struct {
 	Bio      string
 	Image    string
 }{
-	ID:       "user.id",
-	Username: "user.username",
-	Password: "user.password",
-	Email:    "user.email",
-	Bio:      "user.bio",
-	Image:    "user.image",
+	ID:       "app_user.id",
+	Username: "app_user.username",
+	Password: "app_user.password",
+	Email:    "app_user.email",
+	Bio:      "app_user.bio",
+	Image:    "app_user.image",
 }
 
 // Generated where
 
-var UserWhere = struct {
+type whereHelperint64 struct{ field string }
+
+func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint64) IN(slice []int64) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+type whereHelperstring struct{ field string }
+
+func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperstring) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+type whereHelpernull_String struct{ field string }
+
+func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelpernull_String) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
+var AppUserWhere = struct {
 	ID       whereHelperint64
 	Username whereHelperstring
 	Password whereHelperstring
@@ -77,110 +161,110 @@ var UserWhere = struct {
 	Bio      whereHelpernull_String
 	Image    whereHelpernull_String
 }{
-	ID:       whereHelperint64{field: "\"user\".\"id\""},
-	Username: whereHelperstring{field: "\"user\".\"username\""},
-	Password: whereHelperstring{field: "\"user\".\"password\""},
-	Email:    whereHelperstring{field: "\"user\".\"email\""},
-	Bio:      whereHelpernull_String{field: "\"user\".\"bio\""},
-	Image:    whereHelpernull_String{field: "\"user\".\"image\""},
+	ID:       whereHelperint64{field: "\"app_user\".\"id\""},
+	Username: whereHelperstring{field: "\"app_user\".\"username\""},
+	Password: whereHelperstring{field: "\"app_user\".\"password\""},
+	Email:    whereHelperstring{field: "\"app_user\".\"email\""},
+	Bio:      whereHelpernull_String{field: "\"app_user\".\"bio\""},
+	Image:    whereHelpernull_String{field: "\"app_user\".\"image\""},
 }
 
-// UserRels is where relationship names are stored.
-var UserRels = struct {
-	Articles         string
-	ArticleFavorites string
-	Comments         string
-	FollowFollows    string
-	Follows          string
+// AppUserRels is where relationship names are stored.
+var AppUserRels = struct {
+	UserArticles         string
+	UserArticleFavorites string
+	UserComments         string
+	FollowFollows        string
+	UserFollows          string
 }{
-	Articles:         "Articles",
-	ArticleFavorites: "ArticleFavorites",
-	Comments:         "Comments",
-	FollowFollows:    "FollowFollows",
-	Follows:          "Follows",
+	UserArticles:         "UserArticles",
+	UserArticleFavorites: "UserArticleFavorites",
+	UserComments:         "UserComments",
+	FollowFollows:        "FollowFollows",
+	UserFollows:          "UserFollows",
 }
 
-// userR is where relationships are stored.
-type userR struct {
-	Articles         ArticleSlice         `boil:"Articles" json:"Articles" toml:"Articles" yaml:"Articles"`
-	ArticleFavorites ArticleFavoriteSlice `boil:"ArticleFavorites" json:"ArticleFavorites" toml:"ArticleFavorites" yaml:"ArticleFavorites"`
-	Comments         CommentSlice         `boil:"Comments" json:"Comments" toml:"Comments" yaml:"Comments"`
-	FollowFollows    FollowSlice          `boil:"FollowFollows" json:"FollowFollows" toml:"FollowFollows" yaml:"FollowFollows"`
-	Follows          FollowSlice          `boil:"Follows" json:"Follows" toml:"Follows" yaml:"Follows"`
+// appUserR is where relationships are stored.
+type appUserR struct {
+	UserArticles         ArticleSlice         `boil:"UserArticles" json:"UserArticles" toml:"UserArticles" yaml:"UserArticles"`
+	UserArticleFavorites ArticleFavoriteSlice `boil:"UserArticleFavorites" json:"UserArticleFavorites" toml:"UserArticleFavorites" yaml:"UserArticleFavorites"`
+	UserComments         CommentSlice         `boil:"UserComments" json:"UserComments" toml:"UserComments" yaml:"UserComments"`
+	FollowFollows        FollowSlice          `boil:"FollowFollows" json:"FollowFollows" toml:"FollowFollows" yaml:"FollowFollows"`
+	UserFollows          FollowSlice          `boil:"UserFollows" json:"UserFollows" toml:"UserFollows" yaml:"UserFollows"`
 }
 
 // NewStruct creates a new relationship struct
-func (*userR) NewStruct() *userR {
-	return &userR{}
+func (*appUserR) NewStruct() *appUserR {
+	return &appUserR{}
 }
 
-func (r *userR) GetArticles() ArticleSlice {
+func (r *appUserR) GetUserArticles() ArticleSlice {
 	if r == nil {
 		return nil
 	}
-	return r.Articles
+	return r.UserArticles
 }
 
-func (r *userR) GetArticleFavorites() ArticleFavoriteSlice {
+func (r *appUserR) GetUserArticleFavorites() ArticleFavoriteSlice {
 	if r == nil {
 		return nil
 	}
-	return r.ArticleFavorites
+	return r.UserArticleFavorites
 }
 
-func (r *userR) GetComments() CommentSlice {
+func (r *appUserR) GetUserComments() CommentSlice {
 	if r == nil {
 		return nil
 	}
-	return r.Comments
+	return r.UserComments
 }
 
-func (r *userR) GetFollowFollows() FollowSlice {
+func (r *appUserR) GetFollowFollows() FollowSlice {
 	if r == nil {
 		return nil
 	}
 	return r.FollowFollows
 }
 
-func (r *userR) GetFollows() FollowSlice {
+func (r *appUserR) GetUserFollows() FollowSlice {
 	if r == nil {
 		return nil
 	}
-	return r.Follows
+	return r.UserFollows
 }
 
-// userL is where Load methods for each relationship are stored.
-type userL struct{}
+// appUserL is where Load methods for each relationship are stored.
+type appUserL struct{}
 
 var (
-	userAllColumns            = []string{"id", "username", "password", "email", "bio", "image"}
-	userColumnsWithoutDefault = []string{"username", "password", "email"}
-	userColumnsWithDefault    = []string{"id", "bio", "image"}
-	userPrimaryKeyColumns     = []string{"id"}
-	userGeneratedColumns      = []string{"id"}
+	appUserAllColumns            = []string{"id", "username", "password", "email", "bio", "image"}
+	appUserColumnsWithoutDefault = []string{"username", "password", "email"}
+	appUserColumnsWithDefault    = []string{"id", "bio", "image"}
+	appUserPrimaryKeyColumns     = []string{"id"}
+	appUserGeneratedColumns      = []string{}
 )
 
 type (
-	// UserSlice is an alias for a slice of pointers to User.
-	// This should almost always be used instead of []User.
-	UserSlice []*User
+	// AppUserSlice is an alias for a slice of pointers to AppUser.
+	// This should almost always be used instead of []AppUser.
+	AppUserSlice []*AppUser
 
-	userQuery struct {
+	appUserQuery struct {
 		*queries.Query
 	}
 )
 
 // Cache for insert, update and upsert
 var (
-	userType                 = reflect.TypeOf(&User{})
-	userMapping              = queries.MakeStructMapping(userType)
-	userPrimaryKeyMapping, _ = queries.BindMapping(userType, userMapping, userPrimaryKeyColumns)
-	userInsertCacheMut       sync.RWMutex
-	userInsertCache          = make(map[string]insertCache)
-	userUpdateCacheMut       sync.RWMutex
-	userUpdateCache          = make(map[string]updateCache)
-	userUpsertCacheMut       sync.RWMutex
-	userUpsertCache          = make(map[string]insertCache)
+	appUserType                 = reflect.TypeOf(&AppUser{})
+	appUserMapping              = queries.MakeStructMapping(appUserType)
+	appUserPrimaryKeyMapping, _ = queries.BindMapping(appUserType, appUserMapping, appUserPrimaryKeyColumns)
+	appUserInsertCacheMut       sync.RWMutex
+	appUserInsertCache          = make(map[string]insertCache)
+	appUserUpdateCacheMut       sync.RWMutex
+	appUserUpdateCache          = make(map[string]updateCache)
+	appUserUpsertCacheMut       sync.RWMutex
+	appUserUpsertCache          = make(map[string]insertCache)
 )
 
 var (
@@ -191,9 +275,9 @@ var (
 	_ = qmhelper.Where
 )
 
-// One returns a single user record from the query.
-func (q userQuery) One(ctx context.Context, exec boil.ContextExecutor) (*User, error) {
-	o := &User{}
+// One returns a single appUser record from the query.
+func (q appUserQuery) One(ctx context.Context, exec boil.ContextExecutor) (*AppUser, error) {
+	o := &AppUser{}
 
 	queries.SetLimit(q.Query, 1)
 
@@ -202,26 +286,26 @@ func (q userQuery) One(ctx context.Context, exec boil.ContextExecutor) (*User, e
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: failed to execute a one query for user")
+		return nil, errors.Wrap(err, "models: failed to execute a one query for app_user")
 	}
 
 	return o, nil
 }
 
-// All returns all User records from the query.
-func (q userQuery) All(ctx context.Context, exec boil.ContextExecutor) (UserSlice, error) {
-	var o []*User
+// All returns all AppUser records from the query.
+func (q appUserQuery) All(ctx context.Context, exec boil.ContextExecutor) (AppUserSlice, error) {
+	var o []*AppUser
 
 	err := q.Bind(ctx, exec, &o)
 	if err != nil {
-		return nil, errors.Wrap(err, "models: failed to assign all query results to User slice")
+		return nil, errors.Wrap(err, "models: failed to assign all query results to AppUser slice")
 	}
 
 	return o, nil
 }
 
-// Count returns the count of all User records in the query.
-func (q userQuery) Count(ctx context.Context, exec boil.ContextExecutor) (int64, error) {
+// Count returns the count of all AppUser records in the query.
+func (q appUserQuery) Count(ctx context.Context, exec boil.ContextExecutor) (int64, error) {
 	var count int64
 
 	queries.SetSelect(q.Query, nil)
@@ -229,14 +313,14 @@ func (q userQuery) Count(ctx context.Context, exec boil.ContextExecutor) (int64,
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to count user rows")
+		return 0, errors.Wrap(err, "models: failed to count app_user rows")
 	}
 
 	return count, nil
 }
 
 // Exists checks if the row exists in the table.
-func (q userQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
+func (q appUserQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
 	var count int64
 
 	queries.SetSelect(q.Query, nil)
@@ -245,14 +329,14 @@ func (q userQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return false, errors.Wrap(err, "models: failed to check if user exists")
+		return false, errors.Wrap(err, "models: failed to check if app_user exists")
 	}
 
 	return count > 0, nil
 }
 
-// Articles retrieves all the article's Articles with an executor.
-func (o *User) Articles(mods ...qm.QueryMod) articleQuery {
+// UserArticles retrieves all the article's Articles with an executor via user_id column.
+func (o *AppUser) UserArticles(mods ...qm.QueryMod) articleQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
@@ -265,8 +349,8 @@ func (o *User) Articles(mods ...qm.QueryMod) articleQuery {
 	return Articles(queryMods...)
 }
 
-// ArticleFavorites retrieves all the article_favorite's ArticleFavorites with an executor.
-func (o *User) ArticleFavorites(mods ...qm.QueryMod) articleFavoriteQuery {
+// UserArticleFavorites retrieves all the article_favorite's ArticleFavorites with an executor via user_id column.
+func (o *AppUser) UserArticleFavorites(mods ...qm.QueryMod) articleFavoriteQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
@@ -279,8 +363,8 @@ func (o *User) ArticleFavorites(mods ...qm.QueryMod) articleFavoriteQuery {
 	return ArticleFavorites(queryMods...)
 }
 
-// Comments retrieves all the comment's Comments with an executor.
-func (o *User) Comments(mods ...qm.QueryMod) commentQuery {
+// UserComments retrieves all the comment's Comments with an executor via user_id column.
+func (o *AppUser) UserComments(mods ...qm.QueryMod) commentQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
@@ -294,7 +378,7 @@ func (o *User) Comments(mods ...qm.QueryMod) commentQuery {
 }
 
 // FollowFollows retrieves all the follow's Follows with an executor via follow_id column.
-func (o *User) FollowFollows(mods ...qm.QueryMod) followQuery {
+func (o *AppUser) FollowFollows(mods ...qm.QueryMod) followQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
@@ -307,8 +391,8 @@ func (o *User) FollowFollows(mods ...qm.QueryMod) followQuery {
 	return Follows(queryMods...)
 }
 
-// Follows retrieves all the follow's Follows with an executor.
-func (o *User) Follows(mods ...qm.QueryMod) followQuery {
+// UserFollows retrieves all the follow's Follows with an executor via user_id column.
+func (o *AppUser) UserFollows(mods ...qm.QueryMod) followQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
@@ -321,30 +405,30 @@ func (o *User) Follows(mods ...qm.QueryMod) followQuery {
 	return Follows(queryMods...)
 }
 
-// LoadArticles allows an eager lookup of values, cached into the
+// LoadUserArticles allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadArticles(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
-	var slice []*User
-	var object *User
+func (appUserL) LoadUserArticles(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+	var slice []*AppUser
+	var object *AppUser
 
 	if singular {
 		var ok bool
-		object, ok = maybeUser.(*User)
+		object, ok = maybeAppUser.(*AppUser)
 		if !ok {
-			object = new(User)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			object = new(AppUser)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
 			}
 		}
 	} else {
-		s, ok := maybeUser.(*[]*User)
+		s, ok := maybeAppUser.(*[]*AppUser)
 		if ok {
 			slice = *s
 		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
 			}
 		}
 	}
@@ -352,14 +436,14 @@ func (userL) LoadArticles(ctx context.Context, e boil.ContextExecutor, singular 
 	args := make([]interface{}, 0, 1)
 	if singular {
 		if object.R == nil {
-			object.R = &userR{}
+			object.R = &appUserR{}
 		}
 		args = append(args, object.ID)
 	} else {
 	Outer:
 		for _, obj := range slice {
 			if obj.R == nil {
-				obj.R = &userR{}
+				obj.R = &appUserR{}
 			}
 
 			for _, a := range args {
@@ -402,7 +486,7 @@ func (userL) LoadArticles(ctx context.Context, e boil.ContextExecutor, singular 
 	}
 
 	if singular {
-		object.R.Articles = resultSlice
+		object.R.UserArticles = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
 				foreign.R = &articleR{}
@@ -415,7 +499,7 @@ func (userL) LoadArticles(ctx context.Context, e boil.ContextExecutor, singular 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
 			if local.ID == foreign.UserID {
-				local.R.Articles = append(local.R.Articles, foreign)
+				local.R.UserArticles = append(local.R.UserArticles, foreign)
 				if foreign.R == nil {
 					foreign.R = &articleR{}
 				}
@@ -428,30 +512,30 @@ func (userL) LoadArticles(ctx context.Context, e boil.ContextExecutor, singular 
 	return nil
 }
 
-// LoadArticleFavorites allows an eager lookup of values, cached into the
+// LoadUserArticleFavorites allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadArticleFavorites(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
-	var slice []*User
-	var object *User
+func (appUserL) LoadUserArticleFavorites(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+	var slice []*AppUser
+	var object *AppUser
 
 	if singular {
 		var ok bool
-		object, ok = maybeUser.(*User)
+		object, ok = maybeAppUser.(*AppUser)
 		if !ok {
-			object = new(User)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			object = new(AppUser)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
 			}
 		}
 	} else {
-		s, ok := maybeUser.(*[]*User)
+		s, ok := maybeAppUser.(*[]*AppUser)
 		if ok {
 			slice = *s
 		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
 			}
 		}
 	}
@@ -459,14 +543,14 @@ func (userL) LoadArticleFavorites(ctx context.Context, e boil.ContextExecutor, s
 	args := make([]interface{}, 0, 1)
 	if singular {
 		if object.R == nil {
-			object.R = &userR{}
+			object.R = &appUserR{}
 		}
 		args = append(args, object.ID)
 	} else {
 	Outer:
 		for _, obj := range slice {
 			if obj.R == nil {
-				obj.R = &userR{}
+				obj.R = &appUserR{}
 			}
 
 			for _, a := range args {
@@ -509,7 +593,7 @@ func (userL) LoadArticleFavorites(ctx context.Context, e boil.ContextExecutor, s
 	}
 
 	if singular {
-		object.R.ArticleFavorites = resultSlice
+		object.R.UserArticleFavorites = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
 				foreign.R = &articleFavoriteR{}
@@ -522,7 +606,7 @@ func (userL) LoadArticleFavorites(ctx context.Context, e boil.ContextExecutor, s
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
 			if local.ID == foreign.UserID {
-				local.R.ArticleFavorites = append(local.R.ArticleFavorites, foreign)
+				local.R.UserArticleFavorites = append(local.R.UserArticleFavorites, foreign)
 				if foreign.R == nil {
 					foreign.R = &articleFavoriteR{}
 				}
@@ -535,30 +619,30 @@ func (userL) LoadArticleFavorites(ctx context.Context, e boil.ContextExecutor, s
 	return nil
 }
 
-// LoadComments allows an eager lookup of values, cached into the
+// LoadUserComments allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadComments(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
-	var slice []*User
-	var object *User
+func (appUserL) LoadUserComments(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+	var slice []*AppUser
+	var object *AppUser
 
 	if singular {
 		var ok bool
-		object, ok = maybeUser.(*User)
+		object, ok = maybeAppUser.(*AppUser)
 		if !ok {
-			object = new(User)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			object = new(AppUser)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
 			}
 		}
 	} else {
-		s, ok := maybeUser.(*[]*User)
+		s, ok := maybeAppUser.(*[]*AppUser)
 		if ok {
 			slice = *s
 		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
 			}
 		}
 	}
@@ -566,14 +650,14 @@ func (userL) LoadComments(ctx context.Context, e boil.ContextExecutor, singular 
 	args := make([]interface{}, 0, 1)
 	if singular {
 		if object.R == nil {
-			object.R = &userR{}
+			object.R = &appUserR{}
 		}
 		args = append(args, object.ID)
 	} else {
 	Outer:
 		for _, obj := range slice {
 			if obj.R == nil {
-				obj.R = &userR{}
+				obj.R = &appUserR{}
 			}
 
 			for _, a := range args {
@@ -616,7 +700,7 @@ func (userL) LoadComments(ctx context.Context, e boil.ContextExecutor, singular 
 	}
 
 	if singular {
-		object.R.Comments = resultSlice
+		object.R.UserComments = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
 				foreign.R = &commentR{}
@@ -629,7 +713,7 @@ func (userL) LoadComments(ctx context.Context, e boil.ContextExecutor, singular 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
 			if local.ID == foreign.UserID {
-				local.R.Comments = append(local.R.Comments, foreign)
+				local.R.UserComments = append(local.R.UserComments, foreign)
 				if foreign.R == nil {
 					foreign.R = &commentR{}
 				}
@@ -644,28 +728,28 @@ func (userL) LoadComments(ctx context.Context, e boil.ContextExecutor, singular 
 
 // LoadFollowFollows allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadFollowFollows(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
-	var slice []*User
-	var object *User
+func (appUserL) LoadFollowFollows(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+	var slice []*AppUser
+	var object *AppUser
 
 	if singular {
 		var ok bool
-		object, ok = maybeUser.(*User)
+		object, ok = maybeAppUser.(*AppUser)
 		if !ok {
-			object = new(User)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			object = new(AppUser)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
 			}
 		}
 	} else {
-		s, ok := maybeUser.(*[]*User)
+		s, ok := maybeAppUser.(*[]*AppUser)
 		if ok {
 			slice = *s
 		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
 			}
 		}
 	}
@@ -673,14 +757,14 @@ func (userL) LoadFollowFollows(ctx context.Context, e boil.ContextExecutor, sing
 	args := make([]interface{}, 0, 1)
 	if singular {
 		if object.R == nil {
-			object.R = &userR{}
+			object.R = &appUserR{}
 		}
 		args = append(args, object.ID)
 	} else {
 	Outer:
 		for _, obj := range slice {
 			if obj.R == nil {
-				obj.R = &userR{}
+				obj.R = &appUserR{}
 			}
 
 			for _, a := range args {
@@ -749,30 +833,30 @@ func (userL) LoadFollowFollows(ctx context.Context, e boil.ContextExecutor, sing
 	return nil
 }
 
-// LoadFollows allows an eager lookup of values, cached into the
+// LoadUserFollows allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadFollows(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
-	var slice []*User
-	var object *User
+func (appUserL) LoadUserFollows(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+	var slice []*AppUser
+	var object *AppUser
 
 	if singular {
 		var ok bool
-		object, ok = maybeUser.(*User)
+		object, ok = maybeAppUser.(*AppUser)
 		if !ok {
-			object = new(User)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			object = new(AppUser)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
 			}
 		}
 	} else {
-		s, ok := maybeUser.(*[]*User)
+		s, ok := maybeAppUser.(*[]*AppUser)
 		if ok {
 			slice = *s
 		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
 			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
 			}
 		}
 	}
@@ -780,14 +864,14 @@ func (userL) LoadFollows(ctx context.Context, e boil.ContextExecutor, singular b
 	args := make([]interface{}, 0, 1)
 	if singular {
 		if object.R == nil {
-			object.R = &userR{}
+			object.R = &appUserR{}
 		}
 		args = append(args, object.ID)
 	} else {
 	Outer:
 		for _, obj := range slice {
 			if obj.R == nil {
-				obj.R = &userR{}
+				obj.R = &appUserR{}
 			}
 
 			for _, a := range args {
@@ -830,7 +914,7 @@ func (userL) LoadFollows(ctx context.Context, e boil.ContextExecutor, singular b
 	}
 
 	if singular {
-		object.R.Follows = resultSlice
+		object.R.UserFollows = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
 				foreign.R = &followR{}
@@ -843,7 +927,7 @@ func (userL) LoadFollows(ctx context.Context, e boil.ContextExecutor, singular b
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
 			if local.ID == foreign.UserID {
-				local.R.Follows = append(local.R.Follows, foreign)
+				local.R.UserFollows = append(local.R.UserFollows, foreign)
 				if foreign.R == nil {
 					foreign.R = &followR{}
 				}
@@ -856,11 +940,11 @@ func (userL) LoadFollows(ctx context.Context, e boil.ContextExecutor, singular b
 	return nil
 }
 
-// AddArticles adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.Articles.
+// AddUserArticles adds the given related objects to the existing relationships
+// of the app_user, optionally inserting them as new records.
+// Appends related to o.R.UserArticles.
 // Sets related.R.User appropriately.
-func (o *User) AddArticles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Article) error {
+func (o *AppUser) AddUserArticles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Article) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -871,8 +955,8 @@ func (o *User) AddArticles(ctx context.Context, exec boil.ContextExecutor, inser
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"article\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"user_id"}),
-				strmangle.WhereClause("\"", "\"", 0, articlePrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, articlePrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -890,11 +974,11 @@ func (o *User) AddArticles(ctx context.Context, exec boil.ContextExecutor, inser
 	}
 
 	if o.R == nil {
-		o.R = &userR{
-			Articles: related,
+		o.R = &appUserR{
+			UserArticles: related,
 		}
 	} else {
-		o.R.Articles = append(o.R.Articles, related...)
+		o.R.UserArticles = append(o.R.UserArticles, related...)
 	}
 
 	for _, rel := range related {
@@ -909,11 +993,11 @@ func (o *User) AddArticles(ctx context.Context, exec boil.ContextExecutor, inser
 	return nil
 }
 
-// AddArticleFavorites adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.ArticleFavorites.
+// AddUserArticleFavorites adds the given related objects to the existing relationships
+// of the app_user, optionally inserting them as new records.
+// Appends related to o.R.UserArticleFavorites.
 // Sets related.R.User appropriately.
-func (o *User) AddArticleFavorites(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*ArticleFavorite) error {
+func (o *AppUser) AddUserArticleFavorites(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*ArticleFavorite) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -924,8 +1008,8 @@ func (o *User) AddArticleFavorites(ctx context.Context, exec boil.ContextExecuto
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"article_favorite\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"user_id"}),
-				strmangle.WhereClause("\"", "\"", 0, articleFavoritePrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, articleFavoritePrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -943,11 +1027,11 @@ func (o *User) AddArticleFavorites(ctx context.Context, exec boil.ContextExecuto
 	}
 
 	if o.R == nil {
-		o.R = &userR{
-			ArticleFavorites: related,
+		o.R = &appUserR{
+			UserArticleFavorites: related,
 		}
 	} else {
-		o.R.ArticleFavorites = append(o.R.ArticleFavorites, related...)
+		o.R.UserArticleFavorites = append(o.R.UserArticleFavorites, related...)
 	}
 
 	for _, rel := range related {
@@ -962,11 +1046,11 @@ func (o *User) AddArticleFavorites(ctx context.Context, exec boil.ContextExecuto
 	return nil
 }
 
-// AddComments adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.Comments.
+// AddUserComments adds the given related objects to the existing relationships
+// of the app_user, optionally inserting them as new records.
+// Appends related to o.R.UserComments.
 // Sets related.R.User appropriately.
-func (o *User) AddComments(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Comment) error {
+func (o *AppUser) AddUserComments(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Comment) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -977,8 +1061,8 @@ func (o *User) AddComments(ctx context.Context, exec boil.ContextExecutor, inser
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"comment\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"user_id"}),
-				strmangle.WhereClause("\"", "\"", 0, commentPrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, commentPrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -996,11 +1080,11 @@ func (o *User) AddComments(ctx context.Context, exec boil.ContextExecutor, inser
 	}
 
 	if o.R == nil {
-		o.R = &userR{
-			Comments: related,
+		o.R = &appUserR{
+			UserComments: related,
 		}
 	} else {
-		o.R.Comments = append(o.R.Comments, related...)
+		o.R.UserComments = append(o.R.UserComments, related...)
 	}
 
 	for _, rel := range related {
@@ -1016,10 +1100,10 @@ func (o *User) AddComments(ctx context.Context, exec boil.ContextExecutor, inser
 }
 
 // AddFollowFollows adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
+// of the app_user, optionally inserting them as new records.
 // Appends related to o.R.FollowFollows.
 // Sets related.R.Follow appropriately.
-func (o *User) AddFollowFollows(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Follow) error {
+func (o *AppUser) AddFollowFollows(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Follow) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -1030,8 +1114,8 @@ func (o *User) AddFollowFollows(ctx context.Context, exec boil.ContextExecutor, 
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"follow\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"follow_id"}),
-				strmangle.WhereClause("\"", "\"", 0, followPrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"follow_id"}),
+				strmangle.WhereClause("\"", "\"", 2, followPrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -1049,7 +1133,7 @@ func (o *User) AddFollowFollows(ctx context.Context, exec boil.ContextExecutor, 
 	}
 
 	if o.R == nil {
-		o.R = &userR{
+		o.R = &appUserR{
 			FollowFollows: related,
 		}
 	} else {
@@ -1068,11 +1152,11 @@ func (o *User) AddFollowFollows(ctx context.Context, exec boil.ContextExecutor, 
 	return nil
 }
 
-// AddFollows adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.Follows.
+// AddUserFollows adds the given related objects to the existing relationships
+// of the app_user, optionally inserting them as new records.
+// Appends related to o.R.UserFollows.
 // Sets related.R.User appropriately.
-func (o *User) AddFollows(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Follow) error {
+func (o *AppUser) AddUserFollows(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Follow) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -1083,8 +1167,8 @@ func (o *User) AddFollows(ctx context.Context, exec boil.ContextExecutor, insert
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"follow\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"user_id"}),
-				strmangle.WhereClause("\"", "\"", 0, followPrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, followPrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -1102,11 +1186,11 @@ func (o *User) AddFollows(ctx context.Context, exec boil.ContextExecutor, insert
 	}
 
 	if o.R == nil {
-		o.R = &userR{
-			Follows: related,
+		o.R = &appUserR{
+			UserFollows: related,
 		}
 	} else {
-		o.R.Follows = append(o.R.Follows, related...)
+		o.R.UserFollows = append(o.R.UserFollows, related...)
 	}
 
 	for _, rel := range related {
@@ -1121,80 +1205,79 @@ func (o *User) AddFollows(ctx context.Context, exec boil.ContextExecutor, insert
 	return nil
 }
 
-// Users retrieves all the records using an executor.
-func Users(mods ...qm.QueryMod) userQuery {
-	mods = append(mods, qm.From("\"user\""))
+// AppUsers retrieves all the records using an executor.
+func AppUsers(mods ...qm.QueryMod) appUserQuery {
+	mods = append(mods, qm.From("\"app_user\""))
 	q := NewQuery(mods...)
 	if len(queries.GetSelect(q)) == 0 {
-		queries.SetSelect(q, []string{"\"user\".*"})
+		queries.SetSelect(q, []string{"\"app_user\".*"})
 	}
 
-	return userQuery{q}
+	return appUserQuery{q}
 }
 
-// FindUser retrieves a single record by ID with an executor.
+// FindAppUser retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindUser(ctx context.Context, exec boil.ContextExecutor, iD int64, selectCols ...string) (*User, error) {
-	userObj := &User{}
+func FindAppUser(ctx context.Context, exec boil.ContextExecutor, iD int64, selectCols ...string) (*AppUser, error) {
+	appUserObj := &AppUser{}
 
 	sel := "*"
 	if len(selectCols) > 0 {
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"user\" where \"id\"=?", sel,
+		"select %s from \"app_user\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
 
-	err := q.Bind(ctx, exec, userObj)
+	err := q.Bind(ctx, exec, appUserObj)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: unable to select from user")
+		return nil, errors.Wrap(err, "models: unable to select from app_user")
 	}
 
-	return userObj, nil
+	return appUserObj, nil
 }
 
 // Insert a single record using an executor.
 // See boil.Columns.InsertColumnSet documentation to understand column list inference for inserts.
-func (o *User) Insert(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error {
+func (o *AppUser) Insert(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no user provided for insertion")
+		return errors.New("models: no app_user provided for insertion")
 	}
 
 	var err error
 
-	nzDefaults := queries.NonZeroDefaultSet(userColumnsWithDefault, o)
+	nzDefaults := queries.NonZeroDefaultSet(appUserColumnsWithDefault, o)
 
 	key := makeCacheKey(columns, nzDefaults)
-	userInsertCacheMut.RLock()
-	cache, cached := userInsertCache[key]
-	userInsertCacheMut.RUnlock()
+	appUserInsertCacheMut.RLock()
+	cache, cached := appUserInsertCache[key]
+	appUserInsertCacheMut.RUnlock()
 
 	if !cached {
 		wl, returnColumns := columns.InsertColumnSet(
-			userAllColumns,
-			userColumnsWithDefault,
-			userColumnsWithoutDefault,
+			appUserAllColumns,
+			appUserColumnsWithDefault,
+			appUserColumnsWithoutDefault,
 			nzDefaults,
 		)
-		wl = strmangle.SetComplement(wl, userGeneratedColumns)
 
-		cache.valueMapping, err = queries.BindMapping(userType, userMapping, wl)
+		cache.valueMapping, err = queries.BindMapping(appUserType, appUserMapping, wl)
 		if err != nil {
 			return err
 		}
-		cache.retMapping, err = queries.BindMapping(userType, userMapping, returnColumns)
+		cache.retMapping, err = queries.BindMapping(appUserType, appUserMapping, returnColumns)
 		if err != nil {
 			return err
 		}
 		if len(wl) != 0 {
-			cache.query = fmt.Sprintf("INSERT INTO \"user\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
+			cache.query = fmt.Sprintf("INSERT INTO \"app_user\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
 		} else {
-			cache.query = "INSERT INTO \"user\" %sDEFAULT VALUES%s"
+			cache.query = "INSERT INTO \"app_user\" %sDEFAULT VALUES%s"
 		}
 
 		var queryOutput, queryReturning string
@@ -1222,44 +1305,42 @@ func (o *User) Insert(ctx context.Context, exec boil.ContextExecutor, columns bo
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "models: unable to insert into user")
+		return errors.Wrap(err, "models: unable to insert into app_user")
 	}
 
 	if !cached {
-		userInsertCacheMut.Lock()
-		userInsertCache[key] = cache
-		userInsertCacheMut.Unlock()
+		appUserInsertCacheMut.Lock()
+		appUserInsertCache[key] = cache
+		appUserInsertCacheMut.Unlock()
 	}
 
 	return nil
 }
 
-// Update uses an executor to update the User.
+// Update uses an executor to update the AppUser.
 // See boil.Columns.UpdateColumnSet documentation to understand column list inference for updates.
 // Update does not automatically update the record in case of default values. Use .Reload() to refresh the records.
-func (o *User) Update(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error {
+func (o *AppUser) Update(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error {
 	var err error
 	key := makeCacheKey(columns, nil)
-	userUpdateCacheMut.RLock()
-	cache, cached := userUpdateCache[key]
-	userUpdateCacheMut.RUnlock()
+	appUserUpdateCacheMut.RLock()
+	cache, cached := appUserUpdateCache[key]
+	appUserUpdateCacheMut.RUnlock()
 
 	if !cached {
 		wl := columns.UpdateColumnSet(
-			userAllColumns,
-			userPrimaryKeyColumns,
+			appUserAllColumns,
+			appUserPrimaryKeyColumns,
 		)
-		wl = strmangle.SetComplement(wl, userGeneratedColumns)
-
 		if len(wl) == 0 {
-			return errors.New("models: unable to update user, could not build whitelist")
+			return errors.New("models: unable to update app_user, could not build whitelist")
 		}
 
-		cache.query = fmt.Sprintf("UPDATE \"user\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 0, wl),
-			strmangle.WhereClause("\"", "\"", 0, userPrimaryKeyColumns),
+		cache.query = fmt.Sprintf("UPDATE \"app_user\" SET %s WHERE %s",
+			strmangle.SetParamNames("\"", "\"", 1, wl),
+			strmangle.WhereClause("\"", "\"", len(wl)+1, appUserPrimaryKeyColumns),
 		)
-		cache.valueMapping, err = queries.BindMapping(userType, userMapping, append(wl, userPrimaryKeyColumns...))
+		cache.valueMapping, err = queries.BindMapping(appUserType, appUserMapping, append(wl, appUserPrimaryKeyColumns...))
 		if err != nil {
 			return err
 		}
@@ -1274,32 +1355,32 @@ func (o *User) Update(ctx context.Context, exec boil.ContextExecutor, columns bo
 	}
 	_, err = exec.ExecContext(ctx, cache.query, values...)
 	if err != nil {
-		return errors.Wrap(err, "models: unable to update user row")
+		return errors.Wrap(err, "models: unable to update app_user row")
 	}
 
 	if !cached {
-		userUpdateCacheMut.Lock()
-		userUpdateCache[key] = cache
-		userUpdateCacheMut.Unlock()
+		appUserUpdateCacheMut.Lock()
+		appUserUpdateCache[key] = cache
+		appUserUpdateCacheMut.Unlock()
 	}
 
 	return nil
 }
 
 // UpdateAll updates all rows with the specified column values.
-func (q userQuery) UpdateAll(ctx context.Context, exec boil.ContextExecutor, cols M) error {
+func (q appUserQuery) UpdateAll(ctx context.Context, exec boil.ContextExecutor, cols M) error {
 	queries.SetUpdate(q.Query, cols)
 
 	_, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return errors.Wrap(err, "models: unable to update all for user")
+		return errors.Wrap(err, "models: unable to update all for app_user")
 	}
 
 	return nil
 }
 
 // UpdateAll updates all rows with the specified column values, using an executor.
-func (o UserSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, cols M) error {
+func (o AppUserSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, cols M) error {
 	ln := int64(len(o))
 	if ln == 0 {
 		return nil
@@ -1321,13 +1402,13 @@ func (o UserSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, col
 
 	// Append all of the primary key values for each column
 	for _, obj := range o {
-		pkeyArgs := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(obj)), userPrimaryKeyMapping)
+		pkeyArgs := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(obj)), appUserPrimaryKeyMapping)
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := fmt.Sprintf("UPDATE \"user\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, colNames),
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, userPrimaryKeyColumns, len(o)))
+	sql := fmt.Sprintf("UPDATE \"app_user\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, colNames),
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, appUserPrimaryKeyColumns, len(o)))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1336,7 +1417,7 @@ func (o UserSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, col
 	}
 	_, err := exec.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return errors.Wrap(err, "models: unable to update all in user slice")
+		return errors.Wrap(err, "models: unable to update all in appUser slice")
 	}
 
 	return nil
@@ -1344,12 +1425,12 @@ func (o UserSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, col
 
 // Upsert attempts an insert using an executor, and does an update or ignore on conflict.
 // See boil.Columns documentation for how to properly use updateColumns and insertColumns.
-func (o *User) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns) error {
+func (o *AppUser) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no user provided for upsert")
+		return errors.New("models: no app_user provided for upsert")
 	}
 
-	nzDefaults := queries.NonZeroDefaultSet(userColumnsWithDefault, o)
+	nzDefaults := queries.NonZeroDefaultSet(appUserColumnsWithDefault, o)
 
 	// Build cache key in-line uglily - mysql vs psql problems
 	buf := strmangle.GetBuffer()
@@ -1379,41 +1460,42 @@ func (o *User) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCo
 	key := buf.String()
 	strmangle.PutBuffer(buf)
 
-	userUpsertCacheMut.RLock()
-	cache, cached := userUpsertCache[key]
-	userUpsertCacheMut.RUnlock()
+	appUserUpsertCacheMut.RLock()
+	cache, cached := appUserUpsertCache[key]
+	appUserUpsertCacheMut.RUnlock()
 
 	var err error
 
 	if !cached {
 		insert, ret := insertColumns.InsertColumnSet(
-			userAllColumns,
-			userColumnsWithDefault,
-			userColumnsWithoutDefault,
+			appUserAllColumns,
+			appUserColumnsWithDefault,
+			appUserColumnsWithoutDefault,
 			nzDefaults,
 		)
+
 		update := updateColumns.UpdateColumnSet(
-			userAllColumns,
-			userPrimaryKeyColumns,
+			appUserAllColumns,
+			appUserPrimaryKeyColumns,
 		)
 
 		if updateOnConflict && len(update) == 0 {
-			return errors.New("models: unable to upsert user, could not build update column list")
+			return errors.New("models: unable to upsert app_user, could not build update column list")
 		}
 
 		conflict := conflictColumns
 		if len(conflict) == 0 {
-			conflict = make([]string, len(userPrimaryKeyColumns))
-			copy(conflict, userPrimaryKeyColumns)
+			conflict = make([]string, len(appUserPrimaryKeyColumns))
+			copy(conflict, appUserPrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQuerySQLite(dialect, "\"user\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"app_user\"", updateOnConflict, ret, update, conflict, insert)
 
-		cache.valueMapping, err = queries.BindMapping(userType, userMapping, insert)
+		cache.valueMapping, err = queries.BindMapping(appUserType, appUserMapping, insert)
 		if err != nil {
 			return err
 		}
 		if len(ret) != 0 {
-			cache.retMapping, err = queries.BindMapping(userType, userMapping, ret)
+			cache.retMapping, err = queries.BindMapping(appUserType, appUserMapping, ret)
 			if err != nil {
 				return err
 			}
@@ -1441,27 +1523,27 @@ func (o *User) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCo
 		_, err = exec.ExecContext(ctx, cache.query, vals...)
 	}
 	if err != nil {
-		return errors.Wrap(err, "models: unable to upsert user")
+		return errors.Wrap(err, "models: unable to upsert app_user")
 	}
 
 	if !cached {
-		userUpsertCacheMut.Lock()
-		userUpsertCache[key] = cache
-		userUpsertCacheMut.Unlock()
+		appUserUpsertCacheMut.Lock()
+		appUserUpsertCache[key] = cache
+		appUserUpsertCacheMut.Unlock()
 	}
 
 	return nil
 }
 
-// Delete deletes a single User record with an executor.
+// Delete deletes a single AppUser record with an executor.
 // Delete will match against the primary key column to find the record to delete.
-func (o *User) Delete(ctx context.Context, exec boil.ContextExecutor) error {
+func (o *AppUser) Delete(ctx context.Context, exec boil.ContextExecutor) error {
 	if o == nil {
-		return errors.New("models: no User provided for delete")
+		return errors.New("models: no AppUser provided for delete")
 	}
 
-	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), userPrimaryKeyMapping)
-	sql := "DELETE FROM \"user\" WHERE \"id\"=?"
+	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), appUserPrimaryKeyMapping)
+	sql := "DELETE FROM \"app_user\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1470,42 +1552,42 @@ func (o *User) Delete(ctx context.Context, exec boil.ContextExecutor) error {
 	}
 	_, err := exec.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return errors.Wrap(err, "models: unable to delete from user")
+		return errors.Wrap(err, "models: unable to delete from app_user")
 	}
 
 	return nil
 }
 
 // DeleteAll deletes all matching rows.
-func (q userQuery) DeleteAll(ctx context.Context, exec boil.ContextExecutor) error {
+func (q appUserQuery) DeleteAll(ctx context.Context, exec boil.ContextExecutor) error {
 	if q.Query == nil {
-		return errors.New("models: no userQuery provided for delete all")
+		return errors.New("models: no appUserQuery provided for delete all")
 	}
 
 	queries.SetDelete(q.Query)
 
 	_, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return errors.Wrap(err, "models: unable to delete all from user")
+		return errors.Wrap(err, "models: unable to delete all from app_user")
 	}
 
 	return nil
 }
 
 // DeleteAll deletes all rows in the slice, using an executor.
-func (o UserSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) error {
+func (o AppUserSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) error {
 	if len(o) == 0 {
 		return nil
 	}
 
 	var args []interface{}
 	for _, obj := range o {
-		pkeyArgs := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(obj)), userPrimaryKeyMapping)
+		pkeyArgs := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(obj)), appUserPrimaryKeyMapping)
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "DELETE FROM \"user\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, userPrimaryKeyColumns, len(o))
+	sql := "DELETE FROM \"app_user\" WHERE " +
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, appUserPrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1514,7 +1596,7 @@ func (o UserSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) err
 	}
 	_, err := exec.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return errors.Wrap(err, "models: unable to delete all from user slice")
+		return errors.Wrap(err, "models: unable to delete all from appUser slice")
 	}
 
 	return nil
@@ -1522,8 +1604,8 @@ func (o UserSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) err
 
 // Reload refetches the object from the database
 // using the primary keys with an executor.
-func (o *User) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindUser(ctx, exec, o.ID)
+func (o *AppUser) Reload(ctx context.Context, exec boil.ContextExecutor) error {
+	ret, err := FindAppUser(ctx, exec, o.ID)
 	if err != nil {
 		return err
 	}
@@ -1534,26 +1616,26 @@ func (o *User) Reload(ctx context.Context, exec boil.ContextExecutor) error {
 
 // ReloadAll refetches every row with matching primary key column values
 // and overwrites the original object slice with the newly updated slice.
-func (o *UserSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) error {
+func (o *AppUserSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) error {
 	if o == nil || len(*o) == 0 {
 		return nil
 	}
 
-	slice := UserSlice{}
+	slice := AppUserSlice{}
 	var args []interface{}
 	for _, obj := range *o {
-		pkeyArgs := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(obj)), userPrimaryKeyMapping)
+		pkeyArgs := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(obj)), appUserPrimaryKeyMapping)
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "SELECT \"user\".* FROM \"user\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, userPrimaryKeyColumns, len(*o))
+	sql := "SELECT \"app_user\".* FROM \"app_user\" WHERE " +
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, appUserPrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
 
 	err := q.Bind(ctx, exec, &slice)
 	if err != nil {
-		return errors.Wrap(err, "models: unable to reload all in UserSlice")
+		return errors.Wrap(err, "models: unable to reload all in AppUserSlice")
 	}
 
 	*o = slice
@@ -1561,10 +1643,10 @@ func (o *UserSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) er
 	return nil
 }
 
-// UserExists checks if the User row exists.
-func UserExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool, error) {
+// AppUserExists checks if the AppUser row exists.
+func AppUserExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"user\" where \"id\"=? limit 1)"
+	sql := "select exists(select 1 from \"app_user\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1575,7 +1657,7 @@ func UserExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool,
 
 	err := row.Scan(&exists)
 	if err != nil {
-		return false, errors.Wrap(err, "models: unable to check if user exists")
+		return false, errors.Wrap(err, "models: unable to check if app_user exists")
 	}
 
 	return exists, nil

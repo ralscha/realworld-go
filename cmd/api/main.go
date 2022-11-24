@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"github.com/alexedwards/scs/sqlite3store"
+	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"golang.org/x/exp/slog"
@@ -18,7 +18,7 @@ import (
 
 type application struct {
 	config         *config.Config
-	db             *sql.DB
+	database       *sql.DB
 	sessionManager *scsheader.HeaderSession
 }
 
@@ -52,7 +52,7 @@ func main() {
 	}(db)
 
 	sm := scsheader.HeaderSession{SessionManager: scs.New()}
-	sm.Store = sqlite3store.NewWithCleanupInterval(db, 30*time.Minute)
+	sm.Store = postgresstore.NewWithCleanupInterval(db, 30*time.Minute)
 	sm.Lifetime = 24 * time.Hour
 
 	err = initAuth(cfg)
@@ -63,7 +63,7 @@ func main() {
 
 	app := &application{
 		config:         &cfg,
-		db:             db,
+		database:       db,
 		sessionManager: &sm,
 	}
 

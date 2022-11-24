@@ -23,14 +23,14 @@ import (
 
 // Article is an object representing the database table.
 type Article struct {
-	ID          int64  `boil:"id" json:"id" toml:"id" yaml:"id"`
-	UserID      int64  `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	Slug        string `boil:"slug" json:"slug" toml:"slug" yaml:"slug"`
-	Title       string `boil:"title" json:"title" toml:"title" yaml:"title"`
-	Description string `boil:"description" json:"description" toml:"description" yaml:"description"`
-	Body        string `boil:"body" json:"body" toml:"body" yaml:"body"`
-	CreatedAt   int64  `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt   int64  `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ID          int64     `boil:"id" json:"id" toml:"id" yaml:"id"`
+	UserID      int64     `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	Slug        string    `boil:"slug" json:"slug" toml:"slug" yaml:"slug"`
+	Title       string    `boil:"title" json:"title" toml:"title" yaml:"title"`
+	Description string    `boil:"description" json:"description" toml:"description" yaml:"description"`
+	Body        string    `boil:"body" json:"body" toml:"body" yaml:"body"`
+	CreatedAt   time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt   time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *articleR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L articleL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -78,50 +78,25 @@ var ArticleTableColumns = struct {
 
 // Generated where
 
-type whereHelperint64 struct{ field string }
+type whereHelpertime_Time struct{ field string }
 
-func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperint64) IN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
 }
-func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
 }
-
-type whereHelperstring struct{ field string }
-
-func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperstring) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
 }
-func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
 var ArticleWhere = struct {
@@ -131,8 +106,8 @@ var ArticleWhere = struct {
 	Title       whereHelperstring
 	Description whereHelperstring
 	Body        whereHelperstring
-	CreatedAt   whereHelperint64
-	UpdatedAt   whereHelperint64
+	CreatedAt   whereHelpertime_Time
+	UpdatedAt   whereHelpertime_Time
 }{
 	ID:          whereHelperint64{field: "\"article\".\"id\""},
 	UserID:      whereHelperint64{field: "\"article\".\"user_id\""},
@@ -140,8 +115,8 @@ var ArticleWhere = struct {
 	Title:       whereHelperstring{field: "\"article\".\"title\""},
 	Description: whereHelperstring{field: "\"article\".\"description\""},
 	Body:        whereHelperstring{field: "\"article\".\"body\""},
-	CreatedAt:   whereHelperint64{field: "\"article\".\"created_at\""},
-	UpdatedAt:   whereHelperint64{field: "\"article\".\"updated_at\""},
+	CreatedAt:   whereHelpertime_Time{field: "\"article\".\"created_at\""},
+	UpdatedAt:   whereHelpertime_Time{field: "\"article\".\"updated_at\""},
 }
 
 // ArticleRels is where relationship names are stored.
@@ -159,7 +134,7 @@ var ArticleRels = struct {
 
 // articleR is where relationships are stored.
 type articleR struct {
-	User             *User                `boil:"User" json:"User" toml:"User" yaml:"User"`
+	User             *AppUser             `boil:"User" json:"User" toml:"User" yaml:"User"`
 	ArticleFavorites ArticleFavoriteSlice `boil:"ArticleFavorites" json:"ArticleFavorites" toml:"ArticleFavorites" yaml:"ArticleFavorites"`
 	ArticleTags      ArticleTagSlice      `boil:"ArticleTags" json:"ArticleTags" toml:"ArticleTags" yaml:"ArticleTags"`
 	Comments         CommentSlice         `boil:"Comments" json:"Comments" toml:"Comments" yaml:"Comments"`
@@ -170,7 +145,7 @@ func (*articleR) NewStruct() *articleR {
 	return &articleR{}
 }
 
-func (r *articleR) GetUser() *User {
+func (r *articleR) GetUser() *AppUser {
 	if r == nil {
 		return nil
 	}
@@ -203,10 +178,10 @@ type articleL struct{}
 
 var (
 	articleAllColumns            = []string{"id", "user_id", "slug", "title", "description", "body", "created_at", "updated_at"}
-	articleColumnsWithoutDefault = []string{"user_id", "slug", "title", "description", "body", "created_at"}
-	articleColumnsWithDefault    = []string{"id", "updated_at"}
+	articleColumnsWithoutDefault = []string{"user_id", "slug", "title", "description", "body", "created_at", "updated_at"}
+	articleColumnsWithDefault    = []string{"id"}
 	articlePrimaryKeyColumns     = []string{"id"}
-	articleGeneratedColumns      = []string{"id"}
+	articleGeneratedColumns      = []string{}
 )
 
 type (
@@ -301,14 +276,14 @@ func (q articleQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bo
 }
 
 // User pointed to by the foreign key.
-func (o *Article) User(mods ...qm.QueryMod) userQuery {
+func (o *Article) User(mods ...qm.QueryMod) appUserQuery {
 	queryMods := []qm.QueryMod{
 		qm.Where("\"id\" = ?", o.UserID),
 	}
 
 	queryMods = append(queryMods, mods...)
 
-	return Users(queryMods...)
+	return AppUsers(queryMods...)
 }
 
 // ArticleFavorites retrieves all the article_favorite's ArticleFavorites with an executor.
@@ -411,8 +386,8 @@ func (articleL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 	}
 
 	query := NewQuery(
-		qm.From(`user`),
-		qm.WhereIn(`user.id in ?`, args...),
+		qm.From(`app_user`),
+		qm.WhereIn(`app_user.id in ?`, args...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -420,19 +395,19 @@ func (articleL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load User")
+		return errors.Wrap(err, "failed to eager load AppUser")
 	}
 
-	var resultSlice []*User
+	var resultSlice []*AppUser
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice User")
+		return errors.Wrap(err, "failed to bind eager loaded slice AppUser")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for user")
+		return errors.Wrap(err, "failed to close results of eager load for app_user")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for app_user")
 	}
 
 	if len(resultSlice) == 0 {
@@ -443,9 +418,9 @@ func (articleL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 		foreign := resultSlice[0]
 		object.R.User = foreign
 		if foreign.R == nil {
-			foreign.R = &userR{}
+			foreign.R = &appUserR{}
 		}
-		foreign.R.Articles = append(foreign.R.Articles, object)
+		foreign.R.UserArticles = append(foreign.R.UserArticles, object)
 		return nil
 	}
 
@@ -454,9 +429,9 @@ func (articleL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 			if local.UserID == foreign.ID {
 				local.R.User = foreign
 				if foreign.R == nil {
-					foreign.R = &userR{}
+					foreign.R = &appUserR{}
 				}
-				foreign.R.Articles = append(foreign.R.Articles, local)
+				foreign.R.UserArticles = append(foreign.R.UserArticles, local)
 				break
 			}
 		}
@@ -788,8 +763,8 @@ func (articleL) LoadComments(ctx context.Context, e boil.ContextExecutor, singul
 
 // SetUser of the article to the related item.
 // Sets o.R.User to related.
-// Adds o to related.R.Articles.
-func (o *Article) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *User) error {
+// Adds o to related.R.UserArticles.
+func (o *Article) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AppUser) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -799,8 +774,8 @@ func (o *Article) SetUser(ctx context.Context, exec boil.ContextExecutor, insert
 
 	updateQuery := fmt.Sprintf(
 		"UPDATE \"article\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, []string{"user_id"}),
-		strmangle.WhereClause("\"", "\"", 0, articlePrimaryKeyColumns),
+		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+		strmangle.WhereClause("\"", "\"", 2, articlePrimaryKeyColumns),
 	)
 	values := []interface{}{related.ID, o.ID}
 
@@ -823,11 +798,11 @@ func (o *Article) SetUser(ctx context.Context, exec boil.ContextExecutor, insert
 	}
 
 	if related.R == nil {
-		related.R = &userR{
-			Articles: ArticleSlice{o},
+		related.R = &appUserR{
+			UserArticles: ArticleSlice{o},
 		}
 	} else {
-		related.R.Articles = append(related.R.Articles, o)
+		related.R.UserArticles = append(related.R.UserArticles, o)
 	}
 
 	return nil
@@ -848,8 +823,8 @@ func (o *Article) AddArticleFavorites(ctx context.Context, exec boil.ContextExec
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"article_favorite\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"article_id"}),
-				strmangle.WhereClause("\"", "\"", 0, articleFavoritePrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"article_id"}),
+				strmangle.WhereClause("\"", "\"", 2, articleFavoritePrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -901,8 +876,8 @@ func (o *Article) AddArticleTags(ctx context.Context, exec boil.ContextExecutor,
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"article_tag\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"article_id"}),
-				strmangle.WhereClause("\"", "\"", 0, articleTagPrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"article_id"}),
+				strmangle.WhereClause("\"", "\"", 2, articleTagPrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -954,8 +929,8 @@ func (o *Article) AddComments(ctx context.Context, exec boil.ContextExecutor, in
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"comment\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"article_id"}),
-				strmangle.WhereClause("\"", "\"", 0, commentPrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"article_id"}),
+				strmangle.WhereClause("\"", "\"", 2, commentPrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -1013,7 +988,7 @@ func FindArticle(ctx context.Context, exec boil.ContextExecutor, iD int64, selec
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"article\" where \"id\"=?", sel,
+		"select %s from \"article\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -1052,7 +1027,6 @@ func (o *Article) Insert(ctx context.Context, exec boil.ContextExecutor, columns
 			articleColumnsWithoutDefault,
 			nzDefaults,
 		)
-		wl = strmangle.SetComplement(wl, articleGeneratedColumns)
 
 		cache.valueMapping, err = queries.BindMapping(articleType, articleMapping, wl)
 		if err != nil {
@@ -1120,15 +1094,13 @@ func (o *Article) Update(ctx context.Context, exec boil.ContextExecutor, columns
 			articleAllColumns,
 			articlePrimaryKeyColumns,
 		)
-		wl = strmangle.SetComplement(wl, articleGeneratedColumns)
-
 		if len(wl) == 0 {
 			return errors.New("models: unable to update article, could not build whitelist")
 		}
 
 		cache.query = fmt.Sprintf("UPDATE \"article\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 0, wl),
-			strmangle.WhereClause("\"", "\"", 0, articlePrimaryKeyColumns),
+			strmangle.SetParamNames("\"", "\"", 1, wl),
+			strmangle.WhereClause("\"", "\"", len(wl)+1, articlePrimaryKeyColumns),
 		)
 		cache.valueMapping, err = queries.BindMapping(articleType, articleMapping, append(wl, articlePrimaryKeyColumns...))
 		if err != nil {
@@ -1197,8 +1169,8 @@ func (o ArticleSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 	}
 
 	sql := fmt.Sprintf("UPDATE \"article\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, colNames),
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articlePrimaryKeyColumns, len(o)))
+		strmangle.SetParamNames("\"", "\"", 1, colNames),
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, articlePrimaryKeyColumns, len(o)))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1263,6 +1235,7 @@ func (o *Article) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 			articleColumnsWithoutDefault,
 			nzDefaults,
 		)
+
 		update := updateColumns.UpdateColumnSet(
 			articleAllColumns,
 			articlePrimaryKeyColumns,
@@ -1277,7 +1250,7 @@ func (o *Article) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 			conflict = make([]string, len(articlePrimaryKeyColumns))
 			copy(conflict, articlePrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQuerySQLite(dialect, "\"article\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"article\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(articleType, articleMapping, insert)
 		if err != nil {
@@ -1332,7 +1305,7 @@ func (o *Article) Delete(ctx context.Context, exec boil.ContextExecutor) error {
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), articlePrimaryKeyMapping)
-	sql := "DELETE FROM \"article\" WHERE \"id\"=?"
+	sql := "DELETE FROM \"article\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1376,7 +1349,7 @@ func (o ArticleSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 	}
 
 	sql := "DELETE FROM \"article\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articlePrimaryKeyColumns, len(o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, articlePrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1418,7 +1391,7 @@ func (o *ArticleSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 	}
 
 	sql := "SELECT \"article\".* FROM \"article\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articlePrimaryKeyColumns, len(*o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, articlePrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
 
@@ -1435,7 +1408,7 @@ func (o *ArticleSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 // ArticleExists checks if the Article row exists.
 func ArticleExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"article\" where \"id\"=? limit 1)"
+	sql := "select exists(select 1 from \"article\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)

@@ -13,7 +13,7 @@ var dialect = drivers.Dialect{
 	LQ: 0x22,
 	RQ: 0x22,
 
-	UseIndexPlaceholders:    false,
+	UseIndexPlaceholders:    true,
 	UseLastInsertID:         false,
 	UseSchema:               false,
 	UseDefaultKeyword:       true,

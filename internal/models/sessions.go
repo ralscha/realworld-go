@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,9 +23,9 @@ import (
 
 // Session is an object representing the database table.
 type Session struct {
-	Token  null.String `boil:"token" json:"token,omitempty" toml:"token" yaml:"token,omitempty"`
-	Data   []byte      `boil:"data" json:"data" toml:"data" yaml:"data"`
-	Expiry float64     `boil:"expiry" json:"expiry" toml:"expiry" yaml:"expiry"`
+	Token  string    `boil:"token" json:"token" toml:"token" yaml:"token"`
+	Data   []byte    `boil:"data" json:"data" toml:"data" yaml:"data"`
+	Expiry time.Time `boil:"expiry" json:"expiry" toml:"expiry" yaml:"expiry"`
 
 	R *sessionR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L sessionL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -54,44 +53,6 @@ var SessionTableColumns = struct {
 
 // Generated where
 
-type whereHelpernull_String struct{ field string }
-
-func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-func (w whereHelpernull_String) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
-func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 type whereHelper__byte struct{ field string }
 
 func (w whereHelper__byte) EQ(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
@@ -101,43 +62,14 @@ func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.f
 func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
 func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
-type whereHelperfloat64 struct{ field string }
-
-func (w whereHelperfloat64) EQ(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperfloat64) NEQ(x float64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelperfloat64) LT(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperfloat64) LTE(x float64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelperfloat64) GT(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperfloat64) GTE(x float64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-func (w whereHelperfloat64) IN(slice []float64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelperfloat64) NIN(slice []float64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
 var SessionWhere = struct {
-	Token  whereHelpernull_String
+	Token  whereHelperstring
 	Data   whereHelper__byte
-	Expiry whereHelperfloat64
+	Expiry whereHelpertime_Time
 }{
-	Token:  whereHelpernull_String{field: "\"sessions\".\"token\""},
+	Token:  whereHelperstring{field: "\"sessions\".\"token\""},
 	Data:   whereHelper__byte{field: "\"sessions\".\"data\""},
-	Expiry: whereHelperfloat64{field: "\"sessions\".\"expiry\""},
+	Expiry: whereHelpertime_Time{field: "\"sessions\".\"expiry\""},
 }
 
 // SessionRels is where relationship names are stored.
@@ -158,8 +90,8 @@ type sessionL struct{}
 
 var (
 	sessionAllColumns            = []string{"token", "data", "expiry"}
-	sessionColumnsWithoutDefault = []string{"data", "expiry"}
-	sessionColumnsWithDefault    = []string{"token"}
+	sessionColumnsWithoutDefault = []string{"token", "data", "expiry"}
+	sessionColumnsWithDefault    = []string{}
 	sessionPrimaryKeyColumns     = []string{"token"}
 	sessionGeneratedColumns      = []string{}
 )
@@ -268,7 +200,7 @@ func Sessions(mods ...qm.QueryMod) sessionQuery {
 
 // FindSession retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindSession(ctx context.Context, exec boil.ContextExecutor, token null.String, selectCols ...string) (*Session, error) {
+func FindSession(ctx context.Context, exec boil.ContextExecutor, token string, selectCols ...string) (*Session, error) {
 	sessionObj := &Session{}
 
 	sel := "*"
@@ -276,7 +208,7 @@ func FindSession(ctx context.Context, exec boil.ContextExecutor, token null.Stri
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"sessions\" where \"token\"=?", sel,
+		"select %s from \"sessions\" where \"token\"=$1", sel,
 	)
 
 	q := queries.Raw(query, token)
@@ -387,8 +319,8 @@ func (o *Session) Update(ctx context.Context, exec boil.ContextExecutor, columns
 		}
 
 		cache.query = fmt.Sprintf("UPDATE \"sessions\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 0, wl),
-			strmangle.WhereClause("\"", "\"", 0, sessionPrimaryKeyColumns),
+			strmangle.SetParamNames("\"", "\"", 1, wl),
+			strmangle.WhereClause("\"", "\"", len(wl)+1, sessionPrimaryKeyColumns),
 		)
 		cache.valueMapping, err = queries.BindMapping(sessionType, sessionMapping, append(wl, sessionPrimaryKeyColumns...))
 		if err != nil {
@@ -457,8 +389,8 @@ func (o SessionSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 	}
 
 	sql := fmt.Sprintf("UPDATE \"sessions\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, colNames),
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, sessionPrimaryKeyColumns, len(o)))
+		strmangle.SetParamNames("\"", "\"", 1, colNames),
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, sessionPrimaryKeyColumns, len(o)))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -523,6 +455,7 @@ func (o *Session) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 			sessionColumnsWithoutDefault,
 			nzDefaults,
 		)
+
 		update := updateColumns.UpdateColumnSet(
 			sessionAllColumns,
 			sessionPrimaryKeyColumns,
@@ -537,7 +470,7 @@ func (o *Session) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 			conflict = make([]string, len(sessionPrimaryKeyColumns))
 			copy(conflict, sessionPrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQuerySQLite(dialect, "\"sessions\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"sessions\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(sessionType, sessionMapping, insert)
 		if err != nil {
@@ -592,7 +525,7 @@ func (o *Session) Delete(ctx context.Context, exec boil.ContextExecutor) error {
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), sessionPrimaryKeyMapping)
-	sql := "DELETE FROM \"sessions\" WHERE \"token\"=?"
+	sql := "DELETE FROM \"sessions\" WHERE \"token\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -636,7 +569,7 @@ func (o SessionSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 	}
 
 	sql := "DELETE FROM \"sessions\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, sessionPrimaryKeyColumns, len(o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, sessionPrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -678,7 +611,7 @@ func (o *SessionSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 	}
 
 	sql := "SELECT \"sessions\".* FROM \"sessions\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, sessionPrimaryKeyColumns, len(*o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, sessionPrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
 
@@ -693,9 +626,9 @@ func (o *SessionSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 }
 
 // SessionExists checks if the Session row exists.
-func SessionExists(ctx context.Context, exec boil.ContextExecutor, token null.String) (bool, error) {
+func SessionExists(ctx context.Context, exec boil.ContextExecutor, token string) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"sessions\" where \"token\"=? limit 1)"
+	sql := "select exists(select 1 from \"sessions\" where \"token\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)

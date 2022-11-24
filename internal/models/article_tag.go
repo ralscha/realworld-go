@@ -65,17 +65,17 @@ var ArticleTagWhere = struct {
 
 // ArticleTagRels is where relationship names are stored.
 var ArticleTagRels = struct {
-	Tag     string
 	Article string
+	Tag     string
 }{
-	Tag:     "Tag",
 	Article: "Article",
+	Tag:     "Tag",
 }
 
 // articleTagR is where relationships are stored.
 type articleTagR struct {
-	Tag     *Tag     `boil:"Tag" json:"Tag" toml:"Tag" yaml:"Tag"`
 	Article *Article `boil:"Article" json:"Article" toml:"Article" yaml:"Article"`
+	Tag     *Tag     `boil:"Tag" json:"Tag" toml:"Tag" yaml:"Tag"`
 }
 
 // NewStruct creates a new relationship struct
@@ -83,18 +83,18 @@ func (*articleTagR) NewStruct() *articleTagR {
 	return &articleTagR{}
 }
 
-func (r *articleTagR) GetTag() *Tag {
-	if r == nil {
-		return nil
-	}
-	return r.Tag
-}
-
 func (r *articleTagR) GetArticle() *Article {
 	if r == nil {
 		return nil
 	}
 	return r.Article
+}
+
+func (r *articleTagR) GetTag() *Tag {
+	if r == nil {
+		return nil
+	}
+	return r.Tag
 }
 
 // articleTagL is where Load methods for each relationship are stored.
@@ -105,7 +105,7 @@ var (
 	articleTagColumnsWithoutDefault = []string{"article_id", "tag_id"}
 	articleTagColumnsWithDefault    = []string{"id"}
 	articleTagPrimaryKeyColumns     = []string{"id"}
-	articleTagGeneratedColumns      = []string{"id"}
+	articleTagGeneratedColumns      = []string{}
 )
 
 type (
@@ -199,17 +199,6 @@ func (q articleTagQuery) Exists(ctx context.Context, exec boil.ContextExecutor) 
 	return count > 0, nil
 }
 
-// Tag pointed to by the foreign key.
-func (o *ArticleTag) Tag(mods ...qm.QueryMod) tagQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.TagID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return Tags(queryMods...)
-}
-
 // Article pointed to by the foreign key.
 func (o *ArticleTag) Article(mods ...qm.QueryMod) articleQuery {
 	queryMods := []qm.QueryMod{
@@ -221,116 +210,15 @@ func (o *ArticleTag) Article(mods ...qm.QueryMod) articleQuery {
 	return Articles(queryMods...)
 }
 
-// LoadTag allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (articleTagL) LoadTag(ctx context.Context, e boil.ContextExecutor, singular bool, maybeArticleTag interface{}, mods queries.Applicator) error {
-	var slice []*ArticleTag
-	var object *ArticleTag
-
-	if singular {
-		var ok bool
-		object, ok = maybeArticleTag.(*ArticleTag)
-		if !ok {
-			object = new(ArticleTag)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeArticleTag)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeArticleTag))
-			}
-		}
-	} else {
-		s, ok := maybeArticleTag.(*[]*ArticleTag)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeArticleTag)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeArticleTag))
-			}
-		}
+// Tag pointed to by the foreign key.
+func (o *ArticleTag) Tag(mods ...qm.QueryMod) tagQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.TagID),
 	}
 
-	args := make([]interface{}, 0, 1)
-	if singular {
-		if object.R == nil {
-			object.R = &articleTagR{}
-		}
-		args = append(args, object.TagID)
+	queryMods = append(queryMods, mods...)
 
-	} else {
-	Outer:
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &articleTagR{}
-			}
-
-			for _, a := range args {
-				if a == obj.TagID {
-					continue Outer
-				}
-			}
-
-			args = append(args, obj.TagID)
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	query := NewQuery(
-		qm.From(`tag`),
-		qm.WhereIn(`tag.id in ?`, args...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load Tag")
-	}
-
-	var resultSlice []*Tag
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Tag")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for tag")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for tag")
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.Tag = foreign
-		if foreign.R == nil {
-			foreign.R = &tagR{}
-		}
-		foreign.R.ArticleTags = append(foreign.R.ArticleTags, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.TagID == foreign.ID {
-				local.R.Tag = foreign
-				if foreign.R == nil {
-					foreign.R = &tagR{}
-				}
-				foreign.R.ArticleTags = append(foreign.R.ArticleTags, local)
-				break
-			}
-		}
-	}
-
-	return nil
+	return Tags(queryMods...)
 }
 
 // LoadArticle allows an eager lookup of values, cached into the
@@ -445,48 +333,113 @@ func (articleTagL) LoadArticle(ctx context.Context, e boil.ContextExecutor, sing
 	return nil
 }
 
-// SetTag of the articleTag to the related item.
-// Sets o.R.Tag to related.
-// Adds o to related.R.ArticleTags.
-func (o *ArticleTag) SetTag(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Tag) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
+// LoadTag allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (articleTagL) LoadTag(ctx context.Context, e boil.ContextExecutor, singular bool, maybeArticleTag interface{}, mods queries.Applicator) error {
+	var slice []*ArticleTag
+	var object *ArticleTag
+
+	if singular {
+		var ok bool
+		object, ok = maybeArticleTag.(*ArticleTag)
+		if !ok {
+			object = new(ArticleTag)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeArticleTag)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeArticleTag))
+			}
+		}
+	} else {
+		s, ok := maybeArticleTag.(*[]*ArticleTag)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeArticleTag)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeArticleTag))
+			}
 		}
 	}
 
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"article_tag\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, []string{"tag_id"}),
-		strmangle.WhereClause("\"", "\"", 0, articleTagPrimaryKeyColumns),
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &articleTagR{}
+		}
+		args = append(args, object.TagID)
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &articleTagR{}
+			}
+
+			for _, a := range args {
+				if a == obj.TagID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.TagID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`tag`),
+		qm.WhereIn(`tag.id in ?`, args...),
 	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
+	if mods != nil {
+		mods.Apply(query)
 	}
 
-	o.TagID = related.ID
-	if o.R == nil {
-		o.R = &articleTagR{
-			Tag: related,
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load Tag")
+	}
+
+	var resultSlice []*Tag
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice Tag")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for tag")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for tag")
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.Tag = foreign
+		if foreign.R == nil {
+			foreign.R = &tagR{}
 		}
-	} else {
-		o.R.Tag = related
+		foreign.R.ArticleTags = append(foreign.R.ArticleTags, object)
+		return nil
 	}
 
-	if related.R == nil {
-		related.R = &tagR{
-			ArticleTags: ArticleTagSlice{o},
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.TagID == foreign.ID {
+				local.R.Tag = foreign
+				if foreign.R == nil {
+					foreign.R = &tagR{}
+				}
+				foreign.R.ArticleTags = append(foreign.R.ArticleTags, local)
+				break
+			}
 		}
-	} else {
-		related.R.ArticleTags = append(related.R.ArticleTags, o)
 	}
 
 	return nil
@@ -505,8 +458,8 @@ func (o *ArticleTag) SetArticle(ctx context.Context, exec boil.ContextExecutor, 
 
 	updateQuery := fmt.Sprintf(
 		"UPDATE \"article_tag\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, []string{"article_id"}),
-		strmangle.WhereClause("\"", "\"", 0, articleTagPrimaryKeyColumns),
+		strmangle.SetParamNames("\"", "\"", 1, []string{"article_id"}),
+		strmangle.WhereClause("\"", "\"", 2, articleTagPrimaryKeyColumns),
 	)
 	values := []interface{}{related.ID, o.ID}
 
@@ -539,6 +492,53 @@ func (o *ArticleTag) SetArticle(ctx context.Context, exec boil.ContextExecutor, 
 	return nil
 }
 
+// SetTag of the articleTag to the related item.
+// Sets o.R.Tag to related.
+// Adds o to related.R.ArticleTags.
+func (o *ArticleTag) SetTag(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Tag) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"article_tag\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"tag_id"}),
+		strmangle.WhereClause("\"", "\"", 2, articleTagPrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.TagID = related.ID
+	if o.R == nil {
+		o.R = &articleTagR{
+			Tag: related,
+		}
+	} else {
+		o.R.Tag = related
+	}
+
+	if related.R == nil {
+		related.R = &tagR{
+			ArticleTags: ArticleTagSlice{o},
+		}
+	} else {
+		related.R.ArticleTags = append(related.R.ArticleTags, o)
+	}
+
+	return nil
+}
+
 // ArticleTags retrieves all the records using an executor.
 func ArticleTags(mods ...qm.QueryMod) articleTagQuery {
 	mods = append(mods, qm.From("\"article_tag\""))
@@ -560,7 +560,7 @@ func FindArticleTag(ctx context.Context, exec boil.ContextExecutor, iD int64, se
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"article_tag\" where \"id\"=?", sel,
+		"select %s from \"article_tag\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -599,7 +599,6 @@ func (o *ArticleTag) Insert(ctx context.Context, exec boil.ContextExecutor, colu
 			articleTagColumnsWithoutDefault,
 			nzDefaults,
 		)
-		wl = strmangle.SetComplement(wl, articleTagGeneratedColumns)
 
 		cache.valueMapping, err = queries.BindMapping(articleTagType, articleTagMapping, wl)
 		if err != nil {
@@ -667,15 +666,13 @@ func (o *ArticleTag) Update(ctx context.Context, exec boil.ContextExecutor, colu
 			articleTagAllColumns,
 			articleTagPrimaryKeyColumns,
 		)
-		wl = strmangle.SetComplement(wl, articleTagGeneratedColumns)
-
 		if len(wl) == 0 {
 			return errors.New("models: unable to update article_tag, could not build whitelist")
 		}
 
 		cache.query = fmt.Sprintf("UPDATE \"article_tag\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 0, wl),
-			strmangle.WhereClause("\"", "\"", 0, articleTagPrimaryKeyColumns),
+			strmangle.SetParamNames("\"", "\"", 1, wl),
+			strmangle.WhereClause("\"", "\"", len(wl)+1, articleTagPrimaryKeyColumns),
 		)
 		cache.valueMapping, err = queries.BindMapping(articleTagType, articleTagMapping, append(wl, articleTagPrimaryKeyColumns...))
 		if err != nil {
@@ -744,8 +741,8 @@ func (o ArticleTagSlice) UpdateAll(ctx context.Context, exec boil.ContextExecuto
 	}
 
 	sql := fmt.Sprintf("UPDATE \"article_tag\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, colNames),
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articleTagPrimaryKeyColumns, len(o)))
+		strmangle.SetParamNames("\"", "\"", 1, colNames),
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, articleTagPrimaryKeyColumns, len(o)))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -810,6 +807,7 @@ func (o *ArticleTag) Upsert(ctx context.Context, exec boil.ContextExecutor, upda
 			articleTagColumnsWithoutDefault,
 			nzDefaults,
 		)
+
 		update := updateColumns.UpdateColumnSet(
 			articleTagAllColumns,
 			articleTagPrimaryKeyColumns,
@@ -824,7 +822,7 @@ func (o *ArticleTag) Upsert(ctx context.Context, exec boil.ContextExecutor, upda
 			conflict = make([]string, len(articleTagPrimaryKeyColumns))
 			copy(conflict, articleTagPrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQuerySQLite(dialect, "\"article_tag\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"article_tag\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(articleTagType, articleTagMapping, insert)
 		if err != nil {
@@ -879,7 +877,7 @@ func (o *ArticleTag) Delete(ctx context.Context, exec boil.ContextExecutor) erro
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), articleTagPrimaryKeyMapping)
-	sql := "DELETE FROM \"article_tag\" WHERE \"id\"=?"
+	sql := "DELETE FROM \"article_tag\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -923,7 +921,7 @@ func (o ArticleTagSlice) DeleteAll(ctx context.Context, exec boil.ContextExecuto
 	}
 
 	sql := "DELETE FROM \"article_tag\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articleTagPrimaryKeyColumns, len(o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, articleTagPrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -965,7 +963,7 @@ func (o *ArticleTagSlice) ReloadAll(ctx context.Context, exec boil.ContextExecut
 	}
 
 	sql := "SELECT \"article_tag\".* FROM \"article_tag\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articleTagPrimaryKeyColumns, len(*o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, articleTagPrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
 
@@ -982,7 +980,7 @@ func (o *ArticleTagSlice) ReloadAll(ctx context.Context, exec boil.ContextExecut
 // ArticleTagExists checks if the ArticleTag row exists.
 func ArticleTagExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"article_tag\" where \"id\"=? limit 1)"
+	sql := "select exists(select 1 from \"article_tag\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)

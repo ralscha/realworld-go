@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"log"
 	"os"
@@ -29,7 +29,8 @@ func main() {
 		log.Fatalln("reading config failed", err)
 	}
 
-	db, err := goose.OpenDBWithDriver("sqlite3", cfg.DB.Dsn)
+	dsn := "postgres://" + cfg.DB.User + ":" + cfg.DB.Password + "@" + cfg.DB.Connection + "/" + cfg.DB.Database
+	db, err := goose.OpenDBWithDriver("pgx", dsn)
 	if err != nil {
 		log.Fatalf("goose: failed to open DB: %v\n", err)
 	}

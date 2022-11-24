@@ -31,36 +31,38 @@ func initAuth(config config.Config) error {
 }
 
 func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
+	tx := r.Context().Value("tx").(*sql.Tx)
+
 	var userLoginRequest dto.UserRequest
 	if ok := request.DecodeJSONValidate[*dto.UserRequest](w, r, &userLoginRequest, dto.ValidateUserLoginRequest); !ok {
 		return
 	}
 
-	user, err := models.Users(qm.Select(
-		models.UserColumns.ID,
-		models.UserColumns.Email,
-		models.UserColumns.Password,
-		models.UserColumns.Username,
-		models.UserColumns.Bio,
-		models.UserColumns.Image),
-		models.UserWhere.Email.EQ(userLoginRequest.User.Email)).One(r.Context(), app.db)
+	user, err := models.AppUsers(qm.Select(
+		models.AppUserColumns.ID,
+		models.AppUserColumns.Email,
+		models.AppUserColumns.Password,
+		models.AppUserColumns.Username,
+		models.AppUserColumns.Bio,
+		models.AppUserColumns.Image),
+		models.AppUserWhere.Email.EQ(userLoginRequest.User.Email)).One(r.Context(), tx)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			if _, err := argon2id.ComparePasswordAndHash(userNotFoundPasswordHash, userNotFoundPasswordHash); err != nil {
-				response.ServerError(w, err)
+				response.InternalServerError(w, err)
 				return
 			}
 			response.Unauthorized(w)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
 	match, err := argon2id.ComparePasswordAndHash(userLoginRequest.User.Password, user.Password)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -90,27 +92,28 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 func (app *application) createToken(w http.ResponseWriter, r *http.Request, userID int64) (string, bool) {
 	ctx, err := app.sessionManager.Load(r.Context(), "")
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return "", true
 	}
 	app.sessionManager.Put(ctx, "userID", userID)
 	token, _, err := app.sessionManager.Commit(ctx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return "", true
 	}
 	return token, false
 }
 
 func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request) {
+	tx := r.Context().Value("tx").(*sql.Tx)
 	var userLoginRequest dto.UserRequest
 	if ok := request.DecodeJSONValidate[*dto.UserRequest](w, r, &userLoginRequest, dto.ValidateUserRegistrationRequest); !ok {
 		return
 	}
 
-	usernameExists, err := models.Users(models.UserWhere.Username.EQ(userLoginRequest.User.Username)).Exists(r.Context(), app.db)
+	usernameExists, err := models.AppUsers(models.AppUserWhere.Username.EQ(userLoginRequest.User.Username)).Exists(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 	if usernameExists {
@@ -121,9 +124,9 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	emailExists, err := models.Users(models.UserWhere.Email.EQ(userLoginRequest.User.Email)).Exists(r.Context(), app.db)
+	emailExists, err := models.AppUsers(models.AppUserWhere.Email.EQ(userLoginRequest.User.Email)).Exists(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 	if emailExists {
@@ -142,19 +145,19 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 		KeyLength:   app.config.Argon2.KeyLength,
 	})
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
-	newUser := models.User{
+	newUser := models.AppUser{
 		Username: userLoginRequest.User.Username,
 		Password: hashedPassword,
 		Email:    userLoginRequest.User.Email,
 	}
 
-	err = newUser.Insert(r.Context(), app.db, boil.Infer())
+	err = newUser.Insert(r.Context(), tx, boil.Infer())
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -179,19 +182,20 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) usersGetCurrent(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
-	user, err := models.Users(qm.Select(
-		models.UserColumns.Email,
-		models.UserColumns.Username,
-		models.UserColumns.Bio,
-		models.UserColumns.Image),
-		models.UserWhere.ID.EQ(userID)).One(r.Context(), app.db)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
+	user, err := models.AppUsers(qm.Select(
+		models.AppUserColumns.Email,
+		models.AppUserColumns.Username,
+		models.AppUserColumns.Bio,
+		models.AppUserColumns.Image),
+		models.AppUserWhere.ID.EQ(userID)).One(r.Context(), tx)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
@@ -209,6 +213,7 @@ func (app *application) usersGetCurrent(w http.ResponseWriter, r *http.Request) 
 }
 
 func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
+	tx := r.Context().Value("tx").(*sql.Tx)
 	var userUpdateRequest dto.UserRequest
 	err := request.DecodeJSON(w, r, &userUpdateRequest)
 	if err != nil {
@@ -216,22 +221,22 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
-	_, err = models.Users(qm.Select(models.UserColumns.ID), models.UserWhere.ID.EQ(userID)).One(r.Context(), app.db)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
+	_, err = models.AppUsers(qm.Select(models.AppUserColumns.ID), models.AppUserWhere.ID.EQ(userID)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
 	if userUpdateRequest.User.Username != "" {
-		usernameExists, err := models.Users(models.UserWhere.Username.EQ(userUpdateRequest.User.Username),
-			models.UserWhere.ID.NEQ(userID)).Exists(r.Context(), app.db)
+		usernameExists, err := models.AppUsers(models.AppUserWhere.Username.EQ(userUpdateRequest.User.Username),
+			models.AppUserWhere.ID.NEQ(userID)).Exists(r.Context(), tx)
 		if err != nil {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 			return
 		}
 		if usernameExists {
@@ -244,10 +249,10 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userUpdateRequest.User.Email != "" {
-		emailExists, err := models.Users(models.UserWhere.Email.EQ(userUpdateRequest.User.Email),
-			models.UserWhere.ID.NEQ(userID)).Exists(r.Context(), app.db)
+		emailExists, err := models.AppUsers(models.AppUserWhere.Email.EQ(userUpdateRequest.User.Email),
+			models.AppUserWhere.ID.NEQ(userID)).Exists(r.Context(), tx)
 		if err != nil {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 			return
 		}
 		if emailExists {
@@ -262,13 +267,13 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 	updates := models.M{}
 
 	if userUpdateRequest.User.Username != "" {
-		updates[models.UserColumns.Username] = userUpdateRequest.User.Username
+		updates[models.AppUserColumns.Username] = userUpdateRequest.User.Username
 	}
 	if userUpdateRequest.User.Email != "" {
-		updates[models.UserColumns.Email] = userUpdateRequest.User.Email
+		updates[models.AppUserColumns.Email] = userUpdateRequest.User.Email
 	}
-	updates[models.UserColumns.Bio] = userUpdateRequest.User.Bio
-	updates[models.UserColumns.Image] = userUpdateRequest.User.Image
+	updates[models.AppUserColumns.Bio] = userUpdateRequest.User.Bio
+	updates[models.AppUserColumns.Image] = userUpdateRequest.User.Image
 
 	if userUpdateRequest.User.Password != "" {
 		hashedPassword, err := argon2id.CreateHash(userUpdateRequest.User.Password, &argon2id.Params{
@@ -279,26 +284,26 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 			KeyLength:   app.config.Argon2.KeyLength,
 		})
 		if err != nil {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 			return
 		}
-		updates[models.UserColumns.Password] = hashedPassword
+		updates[models.AppUserColumns.Password] = hashedPassword
 	}
 
-	err = models.Users(models.UserWhere.ID.EQ(userID)).UpdateAll(r.Context(), app.db, updates)
+	err = models.AppUsers(models.AppUserWhere.ID.EQ(userID)).UpdateAll(r.Context(), tx, updates)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
-	updatedUser, err := models.Users(qm.Select(
-		models.UserColumns.Email,
-		models.UserColumns.Username,
-		models.UserColumns.Bio,
-		models.UserColumns.Image),
-		models.UserWhere.ID.EQ(userID)).One(r.Context(), app.db)
+	updatedUser, err := models.AppUsers(qm.Select(
+		models.AppUserColumns.Email,
+		models.AppUserColumns.Username,
+		models.AppUserColumns.Bio,
+		models.AppUserColumns.Image),
+		models.AppUserWhere.ID.EQ(userID)).One(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 

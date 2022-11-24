@@ -88,7 +88,7 @@ var (
 	tagColumnsWithoutDefault = []string{"name"}
 	tagColumnsWithDefault    = []string{"id"}
 	tagPrimaryKeyColumns     = []string{"id"}
-	tagGeneratedColumns      = []string{"id"}
+	tagGeneratedColumns      = []string{}
 )
 
 type (
@@ -318,8 +318,8 @@ func (o *Tag) AddArticleTags(ctx context.Context, exec boil.ContextExecutor, ins
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"article_tag\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 0, []string{"tag_id"}),
-				strmangle.WhereClause("\"", "\"", 0, articleTagPrimaryKeyColumns),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"tag_id"}),
+				strmangle.WhereClause("\"", "\"", 2, articleTagPrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -377,7 +377,7 @@ func FindTag(ctx context.Context, exec boil.ContextExecutor, iD int64, selectCol
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"tag\" where \"id\"=?", sel,
+		"select %s from \"tag\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -416,7 +416,6 @@ func (o *Tag) Insert(ctx context.Context, exec boil.ContextExecutor, columns boi
 			tagColumnsWithoutDefault,
 			nzDefaults,
 		)
-		wl = strmangle.SetComplement(wl, tagGeneratedColumns)
 
 		cache.valueMapping, err = queries.BindMapping(tagType, tagMapping, wl)
 		if err != nil {
@@ -484,15 +483,13 @@ func (o *Tag) Update(ctx context.Context, exec boil.ContextExecutor, columns boi
 			tagAllColumns,
 			tagPrimaryKeyColumns,
 		)
-		wl = strmangle.SetComplement(wl, tagGeneratedColumns)
-
 		if len(wl) == 0 {
 			return errors.New("models: unable to update tag, could not build whitelist")
 		}
 
 		cache.query = fmt.Sprintf("UPDATE \"tag\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 0, wl),
-			strmangle.WhereClause("\"", "\"", 0, tagPrimaryKeyColumns),
+			strmangle.SetParamNames("\"", "\"", 1, wl),
+			strmangle.WhereClause("\"", "\"", len(wl)+1, tagPrimaryKeyColumns),
 		)
 		cache.valueMapping, err = queries.BindMapping(tagType, tagMapping, append(wl, tagPrimaryKeyColumns...))
 		if err != nil {
@@ -561,8 +558,8 @@ func (o TagSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, cols
 	}
 
 	sql := fmt.Sprintf("UPDATE \"tag\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, colNames),
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, tagPrimaryKeyColumns, len(o)))
+		strmangle.SetParamNames("\"", "\"", 1, colNames),
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, tagPrimaryKeyColumns, len(o)))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -627,6 +624,7 @@ func (o *Tag) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCon
 			tagColumnsWithoutDefault,
 			nzDefaults,
 		)
+
 		update := updateColumns.UpdateColumnSet(
 			tagAllColumns,
 			tagPrimaryKeyColumns,
@@ -641,7 +639,7 @@ func (o *Tag) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnCon
 			conflict = make([]string, len(tagPrimaryKeyColumns))
 			copy(conflict, tagPrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQuerySQLite(dialect, "\"tag\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"tag\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(tagType, tagMapping, insert)
 		if err != nil {
@@ -696,7 +694,7 @@ func (o *Tag) Delete(ctx context.Context, exec boil.ContextExecutor) error {
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), tagPrimaryKeyMapping)
-	sql := "DELETE FROM \"tag\" WHERE \"id\"=?"
+	sql := "DELETE FROM \"tag\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -740,7 +738,7 @@ func (o TagSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) erro
 	}
 
 	sql := "DELETE FROM \"tag\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, tagPrimaryKeyColumns, len(o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, tagPrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -782,7 +780,7 @@ func (o *TagSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) err
 	}
 
 	sql := "SELECT \"tag\".* FROM \"tag\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, tagPrimaryKeyColumns, len(*o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, tagPrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
 
@@ -799,7 +797,7 @@ func (o *TagSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) err
 // TagExists checks if the Tag row exists.
 func TagExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"tag\" where \"id\"=? limit 1)"
+	sql := "select exists(select 1 from \"tag\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)

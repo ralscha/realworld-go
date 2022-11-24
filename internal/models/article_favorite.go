@@ -65,17 +65,17 @@ var ArticleFavoriteWhere = struct {
 
 // ArticleFavoriteRels is where relationship names are stored.
 var ArticleFavoriteRels = struct {
-	User    string
 	Article string
+	User    string
 }{
-	User:    "User",
 	Article: "Article",
+	User:    "User",
 }
 
 // articleFavoriteR is where relationships are stored.
 type articleFavoriteR struct {
-	User    *User    `boil:"User" json:"User" toml:"User" yaml:"User"`
 	Article *Article `boil:"Article" json:"Article" toml:"Article" yaml:"Article"`
+	User    *AppUser `boil:"User" json:"User" toml:"User" yaml:"User"`
 }
 
 // NewStruct creates a new relationship struct
@@ -83,18 +83,18 @@ func (*articleFavoriteR) NewStruct() *articleFavoriteR {
 	return &articleFavoriteR{}
 }
 
-func (r *articleFavoriteR) GetUser() *User {
-	if r == nil {
-		return nil
-	}
-	return r.User
-}
-
 func (r *articleFavoriteR) GetArticle() *Article {
 	if r == nil {
 		return nil
 	}
 	return r.Article
+}
+
+func (r *articleFavoriteR) GetUser() *AppUser {
+	if r == nil {
+		return nil
+	}
+	return r.User
 }
 
 // articleFavoriteL is where Load methods for each relationship are stored.
@@ -105,7 +105,7 @@ var (
 	articleFavoriteColumnsWithoutDefault = []string{"article_id", "user_id"}
 	articleFavoriteColumnsWithDefault    = []string{"id"}
 	articleFavoritePrimaryKeyColumns     = []string{"id"}
-	articleFavoriteGeneratedColumns      = []string{"id"}
+	articleFavoriteGeneratedColumns      = []string{}
 )
 
 type (
@@ -199,17 +199,6 @@ func (q articleFavoriteQuery) Exists(ctx context.Context, exec boil.ContextExecu
 	return count > 0, nil
 }
 
-// User pointed to by the foreign key.
-func (o *ArticleFavorite) User(mods ...qm.QueryMod) userQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.UserID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return Users(queryMods...)
-}
-
 // Article pointed to by the foreign key.
 func (o *ArticleFavorite) Article(mods ...qm.QueryMod) articleQuery {
 	queryMods := []qm.QueryMod{
@@ -221,116 +210,15 @@ func (o *ArticleFavorite) Article(mods ...qm.QueryMod) articleQuery {
 	return Articles(queryMods...)
 }
 
-// LoadUser allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (articleFavoriteL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular bool, maybeArticleFavorite interface{}, mods queries.Applicator) error {
-	var slice []*ArticleFavorite
-	var object *ArticleFavorite
-
-	if singular {
-		var ok bool
-		object, ok = maybeArticleFavorite.(*ArticleFavorite)
-		if !ok {
-			object = new(ArticleFavorite)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeArticleFavorite)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeArticleFavorite))
-			}
-		}
-	} else {
-		s, ok := maybeArticleFavorite.(*[]*ArticleFavorite)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeArticleFavorite)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeArticleFavorite))
-			}
-		}
+// User pointed to by the foreign key.
+func (o *ArticleFavorite) User(mods ...qm.QueryMod) appUserQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.UserID),
 	}
 
-	args := make([]interface{}, 0, 1)
-	if singular {
-		if object.R == nil {
-			object.R = &articleFavoriteR{}
-		}
-		args = append(args, object.UserID)
+	queryMods = append(queryMods, mods...)
 
-	} else {
-	Outer:
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &articleFavoriteR{}
-			}
-
-			for _, a := range args {
-				if a == obj.UserID {
-					continue Outer
-				}
-			}
-
-			args = append(args, obj.UserID)
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	query := NewQuery(
-		qm.From(`user`),
-		qm.WhereIn(`user.id in ?`, args...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load User")
-	}
-
-	var resultSlice []*User
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice User")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for user")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user")
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.User = foreign
-		if foreign.R == nil {
-			foreign.R = &userR{}
-		}
-		foreign.R.ArticleFavorites = append(foreign.R.ArticleFavorites, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.UserID == foreign.ID {
-				local.R.User = foreign
-				if foreign.R == nil {
-					foreign.R = &userR{}
-				}
-				foreign.R.ArticleFavorites = append(foreign.R.ArticleFavorites, local)
-				break
-			}
-		}
-	}
-
-	return nil
+	return AppUsers(queryMods...)
 }
 
 // LoadArticle allows an eager lookup of values, cached into the
@@ -445,48 +333,113 @@ func (articleFavoriteL) LoadArticle(ctx context.Context, e boil.ContextExecutor,
 	return nil
 }
 
-// SetUser of the articleFavorite to the related item.
-// Sets o.R.User to related.
-// Adds o to related.R.ArticleFavorites.
-func (o *ArticleFavorite) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *User) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
+// LoadUser allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (articleFavoriteL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular bool, maybeArticleFavorite interface{}, mods queries.Applicator) error {
+	var slice []*ArticleFavorite
+	var object *ArticleFavorite
+
+	if singular {
+		var ok bool
+		object, ok = maybeArticleFavorite.(*ArticleFavorite)
+		if !ok {
+			object = new(ArticleFavorite)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeArticleFavorite)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeArticleFavorite))
+			}
+		}
+	} else {
+		s, ok := maybeArticleFavorite.(*[]*ArticleFavorite)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeArticleFavorite)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeArticleFavorite))
+			}
 		}
 	}
 
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"article_favorite\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, []string{"user_id"}),
-		strmangle.WhereClause("\"", "\"", 0, articleFavoritePrimaryKeyColumns),
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &articleFavoriteR{}
+		}
+		args = append(args, object.UserID)
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &articleFavoriteR{}
+			}
+
+			for _, a := range args {
+				if a == obj.UserID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.UserID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`app_user`),
+		qm.WhereIn(`app_user.id in ?`, args...),
 	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
+	if mods != nil {
+		mods.Apply(query)
 	}
 
-	o.UserID = related.ID
-	if o.R == nil {
-		o.R = &articleFavoriteR{
-			User: related,
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load AppUser")
+	}
+
+	var resultSlice []*AppUser
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice AppUser")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for app_user")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for app_user")
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.User = foreign
+		if foreign.R == nil {
+			foreign.R = &appUserR{}
 		}
-	} else {
-		o.R.User = related
+		foreign.R.UserArticleFavorites = append(foreign.R.UserArticleFavorites, object)
+		return nil
 	}
 
-	if related.R == nil {
-		related.R = &userR{
-			ArticleFavorites: ArticleFavoriteSlice{o},
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.UserID == foreign.ID {
+				local.R.User = foreign
+				if foreign.R == nil {
+					foreign.R = &appUserR{}
+				}
+				foreign.R.UserArticleFavorites = append(foreign.R.UserArticleFavorites, local)
+				break
+			}
 		}
-	} else {
-		related.R.ArticleFavorites = append(related.R.ArticleFavorites, o)
 	}
 
 	return nil
@@ -505,8 +458,8 @@ func (o *ArticleFavorite) SetArticle(ctx context.Context, exec boil.ContextExecu
 
 	updateQuery := fmt.Sprintf(
 		"UPDATE \"article_favorite\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, []string{"article_id"}),
-		strmangle.WhereClause("\"", "\"", 0, articleFavoritePrimaryKeyColumns),
+		strmangle.SetParamNames("\"", "\"", 1, []string{"article_id"}),
+		strmangle.WhereClause("\"", "\"", 2, articleFavoritePrimaryKeyColumns),
 	)
 	values := []interface{}{related.ID, o.ID}
 
@@ -539,6 +492,53 @@ func (o *ArticleFavorite) SetArticle(ctx context.Context, exec boil.ContextExecu
 	return nil
 }
 
+// SetUser of the articleFavorite to the related item.
+// Sets o.R.User to related.
+// Adds o to related.R.UserArticleFavorites.
+func (o *ArticleFavorite) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AppUser) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"article_favorite\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+		strmangle.WhereClause("\"", "\"", 2, articleFavoritePrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.UserID = related.ID
+	if o.R == nil {
+		o.R = &articleFavoriteR{
+			User: related,
+		}
+	} else {
+		o.R.User = related
+	}
+
+	if related.R == nil {
+		related.R = &appUserR{
+			UserArticleFavorites: ArticleFavoriteSlice{o},
+		}
+	} else {
+		related.R.UserArticleFavorites = append(related.R.UserArticleFavorites, o)
+	}
+
+	return nil
+}
+
 // ArticleFavorites retrieves all the records using an executor.
 func ArticleFavorites(mods ...qm.QueryMod) articleFavoriteQuery {
 	mods = append(mods, qm.From("\"article_favorite\""))
@@ -560,7 +560,7 @@ func FindArticleFavorite(ctx context.Context, exec boil.ContextExecutor, iD int6
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"article_favorite\" where \"id\"=?", sel,
+		"select %s from \"article_favorite\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -599,7 +599,6 @@ func (o *ArticleFavorite) Insert(ctx context.Context, exec boil.ContextExecutor,
 			articleFavoriteColumnsWithoutDefault,
 			nzDefaults,
 		)
-		wl = strmangle.SetComplement(wl, articleFavoriteGeneratedColumns)
 
 		cache.valueMapping, err = queries.BindMapping(articleFavoriteType, articleFavoriteMapping, wl)
 		if err != nil {
@@ -667,15 +666,13 @@ func (o *ArticleFavorite) Update(ctx context.Context, exec boil.ContextExecutor,
 			articleFavoriteAllColumns,
 			articleFavoritePrimaryKeyColumns,
 		)
-		wl = strmangle.SetComplement(wl, articleFavoriteGeneratedColumns)
-
 		if len(wl) == 0 {
 			return errors.New("models: unable to update article_favorite, could not build whitelist")
 		}
 
 		cache.query = fmt.Sprintf("UPDATE \"article_favorite\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 0, wl),
-			strmangle.WhereClause("\"", "\"", 0, articleFavoritePrimaryKeyColumns),
+			strmangle.SetParamNames("\"", "\"", 1, wl),
+			strmangle.WhereClause("\"", "\"", len(wl)+1, articleFavoritePrimaryKeyColumns),
 		)
 		cache.valueMapping, err = queries.BindMapping(articleFavoriteType, articleFavoriteMapping, append(wl, articleFavoritePrimaryKeyColumns...))
 		if err != nil {
@@ -744,8 +741,8 @@ func (o ArticleFavoriteSlice) UpdateAll(ctx context.Context, exec boil.ContextEx
 	}
 
 	sql := fmt.Sprintf("UPDATE \"article_favorite\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 0, colNames),
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articleFavoritePrimaryKeyColumns, len(o)))
+		strmangle.SetParamNames("\"", "\"", 1, colNames),
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, articleFavoritePrimaryKeyColumns, len(o)))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -810,6 +807,7 @@ func (o *ArticleFavorite) Upsert(ctx context.Context, exec boil.ContextExecutor,
 			articleFavoriteColumnsWithoutDefault,
 			nzDefaults,
 		)
+
 		update := updateColumns.UpdateColumnSet(
 			articleFavoriteAllColumns,
 			articleFavoritePrimaryKeyColumns,
@@ -824,7 +822,7 @@ func (o *ArticleFavorite) Upsert(ctx context.Context, exec boil.ContextExecutor,
 			conflict = make([]string, len(articleFavoritePrimaryKeyColumns))
 			copy(conflict, articleFavoritePrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQuerySQLite(dialect, "\"article_favorite\"", updateOnConflict, ret, update, conflict, insert)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"article_favorite\"", updateOnConflict, ret, update, conflict, insert)
 
 		cache.valueMapping, err = queries.BindMapping(articleFavoriteType, articleFavoriteMapping, insert)
 		if err != nil {
@@ -879,7 +877,7 @@ func (o *ArticleFavorite) Delete(ctx context.Context, exec boil.ContextExecutor)
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), articleFavoritePrimaryKeyMapping)
-	sql := "DELETE FROM \"article_favorite\" WHERE \"id\"=?"
+	sql := "DELETE FROM \"article_favorite\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -923,7 +921,7 @@ func (o ArticleFavoriteSlice) DeleteAll(ctx context.Context, exec boil.ContextEx
 	}
 
 	sql := "DELETE FROM \"article_favorite\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articleFavoritePrimaryKeyColumns, len(o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, articleFavoritePrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -965,7 +963,7 @@ func (o *ArticleFavoriteSlice) ReloadAll(ctx context.Context, exec boil.ContextE
 	}
 
 	sql := "SELECT \"article_favorite\".* FROM \"article_favorite\" WHERE " +
-		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 0, articleFavoritePrimaryKeyColumns, len(*o))
+		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, articleFavoritePrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
 
@@ -982,7 +980,7 @@ func (o *ArticleFavoriteSlice) ReloadAll(ctx context.Context, exec boil.ContextE
 // ArticleFavoriteExists checks if the ArticleFavorite row exists.
 func ArticleFavoriteExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"article_favorite\" where \"id\"=? limit 1)"
+	sql := "select exists(select 1 from \"article_favorite\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)

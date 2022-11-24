@@ -18,7 +18,8 @@ import (
 )
 
 func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	offsetParam := r.URL.Query().Get("offset")
 	limitParam := r.URL.Query().Get("limit")
 
@@ -31,19 +32,19 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 
 	offset, err := strconv.Atoi(offsetParam)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
 	limit, err := strconv.Atoi(limitParam)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
-	follows, err := models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), app.db)
+	follows, err := models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -52,15 +53,15 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 		followIds[i] = follow.FollowID
 	}
 
-	articles, err := models.Articles(models.ArticleWhere.UserID.IN(followIds), qm.Limit(limit), qm.Offset(offset)).All(r.Context(), app.db)
+	articles, err := models.Articles(models.ArticleWhere.UserID.IN(followIds), qm.Limit(limit), qm.Offset(offset)).All(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
-	articlesCount, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.UserID.IN(followIds)).Count(r.Context(), app.db)
+	articlesCount, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.UserID.IN(followIds)).Count(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -68,7 +69,7 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 	for i, article := range articles {
 		dtoArticle, err := app.getArticle(r.Context(), article, true, userID)
 		if err != nil {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 			return
 		}
 
@@ -82,6 +83,7 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
+	tx := r.Context().Value("tx").(*sql.Tx)
 	authentiated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
@@ -101,13 +103,13 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 
 	offset, err := strconv.Atoi(offsetParam)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
 	limit, err := strconv.Atoi(limitParam)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -129,21 +131,21 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 		mods = append(mods,
 			qm.InnerJoin(models.TableNames.ArticleFavorite+" ON "+models.TableNames.ArticleFavorite+"."+models.ArticleFavoriteColumns.ArticleID+" = "+models.TableNames.Article+"."+models.ArticleColumns.ID))
 		mods = append(mods,
-			qm.InnerJoin(models.TableNames.User+" ON "+models.TableNames.User+"."+models.UserColumns.ID+" = "+models.TableNames.ArticleFavorite+"."+models.ArticleFavoriteColumns.UserID))
-		mods = append(mods, models.UserWhere.Username.EQ(favoritedParam))
+			qm.InnerJoin(models.TableNames.AppUser+" ON "+models.TableNames.AppUser+"."+models.AppUserColumns.ID+" = "+models.TableNames.ArticleFavorite+"."+models.ArticleFavoriteColumns.UserID))
+		mods = append(mods, models.AppUserWhere.Username.EQ(favoritedParam))
 	}
 
 	if authorParam != "" {
 		mods = append(mods,
-			qm.InnerJoin(models.TableNames.User+" ON "+models.TableNames.User+"."+models.UserColumns.ID+" = "+models.TableNames.Article+"."+models.ArticleColumns.UserID))
-		mods = append(mods, models.UserWhere.Username.EQ(authorParam))
+			qm.InnerJoin(models.TableNames.AppUser+" ON "+models.TableNames.AppUser+"."+models.AppUserColumns.ID+" = "+models.TableNames.Article+"."+models.ArticleColumns.UserID))
+		mods = append(mods, models.AppUserWhere.Username.EQ(authorParam))
 	}
 
 	mods = append(mods, qm.Limit(limit), qm.Offset(offset))
 
-	articlesCount, err := models.Articles(mods...).Count(r.Context(), app.db)
+	articlesCount, err := models.Articles(mods...).Count(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -155,9 +157,9 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	articles, err := models.Articles(mods...).All(r.Context(), app.db)
+	articles, err := models.Articles(mods...).All(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -165,7 +167,7 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 	for i, article := range articles {
 		dtoArticle, err := app.getArticle(r.Context(), article, authentiated, userID)
 		if err != nil {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 			return
 		}
 
@@ -193,7 +195,7 @@ func (app *application) articleGet(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
@@ -204,26 +206,27 @@ func (app *application) articleGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	var articleRequest dto.ArticleRequest
 	if ok := request.DecodeJSONValidate[*dto.ArticleRequest](w, r, &articleRequest, dto.ValidateArticleCreateRequest); !ok {
 		return
 	}
 
-	secondsSinceEpoch := time.Now().Unix()
+	now := time.Now()
 	newArticle := models.Article{
 		Title:       articleRequest.Article.Title,
 		Description: articleRequest.Article.Description,
 		Body:        articleRequest.Article.Body,
 		UserID:      userID,
 		Slug:        slug.Make(articleRequest.Article.Title),
-		CreatedAt:   secondsSinceEpoch,
-		UpdatedAt:   secondsSinceEpoch,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
-	err := newArticle.Insert(r.Context(), app.db, boil.Infer())
+	err := newArticle.Insert(r.Context(), tx, boil.Infer())
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -231,19 +234,19 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 		if articleTag == "" {
 			continue
 		}
-		tag, err := models.Tags(models.TagWhere.Name.EQ(articleTag)).One(r.Context(), app.db)
+		tag, err := models.Tags(models.TagWhere.Name.EQ(articleTag)).One(r.Context(), tx)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				tag = &models.Tag{
 					Name: articleTag,
 				}
-				err = tag.Insert(r.Context(), app.db, boil.Infer())
+				err = tag.Insert(r.Context(), tx, boil.Infer())
 				if err != nil {
-					response.ServerError(w, err)
+					response.InternalServerError(w, err)
 					return
 				}
 			} else {
-				response.ServerError(w, err)
+				response.InternalServerError(w, err)
 				return
 			}
 		}
@@ -251,16 +254,16 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 			ArticleID: newArticle.ID,
 			TagID:     tag.ID,
 		}
-		err = articleTag.Insert(r.Context(), app.db, boil.Infer())
+		err = articleTag.Insert(r.Context(), tx, boil.Infer())
 		if err != nil {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 			return
 		}
 	}
 
 	insertedArticle, err := app.getArticleByID(r.Context(), newArticle.ID, true, userID)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -270,7 +273,8 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 
 	var articleRequest dto.ArticleRequest
@@ -279,12 +283,12 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug), models.ArticleWhere.UserID.EQ(userID)).One(r.Context(), app.db)
+	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug), models.ArticleWhere.UserID.EQ(userID)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
@@ -303,15 +307,15 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 		updates[models.ArticleColumns.Body] = articleRequest.Article.Body
 	}
 
-	err = models.Articles(models.ArticleWhere.ID.EQ(article.ID)).UpdateAll(r.Context(), app.db, updates)
+	err = models.Articles(models.ArticleWhere.ID.EQ(article.ID)).UpdateAll(r.Context(), tx, updates)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
 	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -321,22 +325,23 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	tx := r.Context().Value("tx").(*sql.Tx)
+	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 
-	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug), models.ArticleWhere.UserID.EQ(userID)).One(r.Context(), app.db)
+	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug), models.ArticleWhere.UserID.EQ(userID)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
 		} else {
-			response.ServerError(w, err)
+			response.InternalServerError(w, err)
 		}
 		return
 	}
 
-	err = models.Articles(models.ArticleWhere.ID.EQ(article.ID)).DeleteAll(r.Context(), app.db)
+	err = models.Articles(models.ArticleWhere.ID.EQ(article.ID)).DeleteAll(r.Context(), tx)
 	if err != nil {
-		response.ServerError(w, err)
+		response.InternalServerError(w, err)
 		return
 	}
 
@@ -344,6 +349,7 @@ func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) getArticleByID(ctx context.Context, articleID int64, authentiated bool, userID int64) (dto.Article, error) {
+	tx := ctx.Value("tx").(*sql.Tx)
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -355,7 +361,7 @@ func (app *application) getArticleByID(ctx context.Context, articleID int64, aut
 			models.ArticleColumns.CreatedAt,
 			models.ArticleColumns.UpdatedAt,
 		),
-		models.ArticleWhere.ID.EQ(articleID)).One(ctx, app.db)
+		models.ArticleWhere.ID.EQ(articleID)).One(ctx, tx)
 	if err != nil {
 		return dto.Article{}, err
 	}
@@ -364,6 +370,7 @@ func (app *application) getArticleByID(ctx context.Context, articleID int64, aut
 }
 
 func (app *application) getArticleBySlug(ctx context.Context, articleSlug string, authenticated bool, userID int64) (dto.Article, error) {
+	tx := ctx.Value("tx").(*sql.Tx)
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -374,7 +381,7 @@ func (app *application) getArticleBySlug(ctx context.Context, articleSlug string
 			models.ArticleColumns.Slug,
 			models.ArticleColumns.CreatedAt,
 			models.ArticleColumns.UpdatedAt,
-		), models.ArticleWhere.Slug.EQ(articleSlug)).One(ctx, app.db)
+		), models.ArticleWhere.Slug.EQ(articleSlug)).One(ctx, tx)
 	if err != nil {
 		return dto.Article{}, err
 	}
@@ -383,9 +390,10 @@ func (app *application) getArticleBySlug(ctx context.Context, articleSlug string
 }
 
 func (app *application) getArticle(ctx context.Context, article *models.Article, authenticated bool, userID int64) (dto.Article, error) {
-	author, err := models.Users(qm.Select(models.UserColumns.Username,
-		models.UserColumns.Bio, models.UserColumns.Image),
-		models.UserWhere.ID.EQ(article.UserID)).One(ctx, app.db)
+	tx := ctx.Value("tx").(*sql.Tx)
+	author, err := models.AppUsers(qm.Select(models.AppUserColumns.Username,
+		models.AppUserColumns.Bio, models.AppUserColumns.Image),
+		models.AppUserWhere.ID.EQ(article.UserID)).One(ctx, tx)
 	if err != nil {
 		return dto.Article{}, err
 	}
@@ -393,7 +401,7 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 	following := false
 	if userID != 0 {
 		following, err = models.Follows(models.FollowWhere.UserID.EQ(userID), models.FollowWhere.FollowID.EQ(author.ID)).
-			Exists(ctx, app.db)
+			Exists(ctx, tx)
 		if err != nil {
 			return dto.Article{}, err
 		}
@@ -410,7 +418,7 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 	if authenticated {
 		favorited, err = models.ArticleFavorites(models.ArticleFavoriteWhere.UserID.EQ(userID),
 			models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).
-			Exists(ctx, app.db)
+			Exists(ctx, tx)
 		if err != nil {
 			return dto.Article{}, err
 		}
@@ -419,7 +427,7 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 	tags, err := models.Tags(qm.Select(models.TagColumns.Name),
 		qm.InnerJoin(models.TableNames.ArticleTag+" ON "+models.TableNames.ArticleTag+"."+models.ArticleTagColumns.TagID+" = "+models.TableNames.Tag+"."+models.TagColumns.ID),
 		models.ArticleTagWhere.ArticleID.EQ(article.ID), qm.OrderBy(models.TagColumns.Name)).
-		All(ctx, app.db)
+		All(ctx, tx)
 	if err != nil {
 		return dto.Article{}, err
 	}
@@ -430,21 +438,19 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 	}
 
 	favoritesCount, err := models.ArticleFavorites(models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).
-		Count(ctx, app.db)
+		Count(ctx, tx)
 	if err != nil {
 		return dto.Article{}, err
 	}
 
-	createdAtTime := time.Unix(article.CreatedAt, 1)
-	updatedAtTime := time.Unix(article.UpdatedAt, 1)
 	articleDto := dto.Article{
 		Slug:           article.Slug,
 		Title:          article.Title,
 		Description:    article.Description,
 		Body:           article.Body,
 		TagList:        tagList,
-		CreatedAt:      createdAtTime.UTC().Format(time.RFC3339Nano),
-		UpdatedAt:      updatedAtTime.UTC().Format(time.RFC3339Nano),
+		CreatedAt:      article.CreatedAt.UTC().Format(time.RFC3339Nano),
+		UpdatedAt:      article.UpdatedAt.UTC().Format(time.RFC3339Nano),
 		Favorited:      favorited,
 		FavoritesCount: int(favoritesCount),
 		Author:         authorProfile,
