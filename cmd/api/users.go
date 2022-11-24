@@ -87,13 +87,13 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, userResponse)
 }
 
-func (app *application) createToken(w http.ResponseWriter, r *http.Request, err error, userId int64) (string, bool) {
+func (app *application) createToken(w http.ResponseWriter, r *http.Request, err error, userID int64) (string, bool) {
 	ctx, err := app.sessionManager.Load(r.Context(), "")
 	if err != nil {
 		response.ServerError(w, err)
 		return "", true
 	}
-	app.sessionManager.Put(ctx, "userID", userId)
+	app.sessionManager.Put(ctx, "userID", userID)
 	token, _, err := app.sessionManager.Commit(ctx)
 	if err != nil {
 		response.ServerError(w, err)

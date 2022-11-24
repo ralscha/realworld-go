@@ -266,7 +266,9 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updates := models.M{}
+	updates := models.M{
+		models.ArticleColumns.UpdatedAt: time.Now().Unix(),
+	}
 	if articleRequest.Article.Title != "" {
 		updates[models.ArticleColumns.Title] = articleRequest.Article.Title
 		updates[models.ArticleColumns.Slug] = slug.Make(articleRequest.Article.Title)
@@ -318,7 +320,7 @@ func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, nil)
 }
 
-func (app *application) getArticleById(ctx context.Context, articleId, userId int64) (dto.Article, error) {
+func (app *application) getArticleById(ctx context.Context, articleId, userID int64) (dto.Article, error) {
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -335,10 +337,10 @@ func (app *application) getArticleById(ctx context.Context, articleId, userId in
 		return dto.Article{}, err
 	}
 
-	return app.getArticle(ctx, article, userId)
+	return app.getArticle(ctx, article, userID)
 }
 
-func (app *application) getArticleBySlug(ctx context.Context, articleSlug string, userId int64) (dto.Article, error) {
+func (app *application) getArticleBySlug(ctx context.Context, articleSlug string, userID int64) (dto.Article, error) {
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -354,10 +356,10 @@ func (app *application) getArticleBySlug(ctx context.Context, articleSlug string
 		return dto.Article{}, err
 	}
 
-	return app.getArticle(ctx, article, userId)
+	return app.getArticle(ctx, article, userID)
 }
 
-func (app *application) getArticle(ctx context.Context, article *models.Article, userId int64) (dto.Article, error) {
+func (app *application) getArticle(ctx context.Context, article *models.Article, userID int64) (dto.Article, error) {
 	author, err := models.Users(qm.Select(models.UserColumns.Username,
 		models.UserColumns.Bio, models.UserColumns.Image),
 		models.UserWhere.ID.EQ(article.UserID)).One(ctx, app.db)
@@ -366,8 +368,8 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 	}
 
 	following := false
-	if userId != 0 {
-		following, err = models.Follows(models.FollowWhere.UserID.EQ(userId), models.FollowWhere.FollowID.EQ(author.ID)).
+	if userID != 0 {
+		following, err = models.Follows(models.FollowWhere.UserID.EQ(userID), models.FollowWhere.FollowID.EQ(author.ID)).
 			Exists(ctx, app.db)
 		if err != nil {
 			return dto.Article{}, err
@@ -382,8 +384,8 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 	}
 
 	favorited := false
-	if userId != 0 {
-		favorited, err = models.ArticleFavorites(models.ArticleFavoriteWhere.UserID.EQ(userId),
+	if userID != 0 {
+		favorited, err = models.ArticleFavorites(models.ArticleFavoriteWhere.UserID.EQ(userID),
 			models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).
 			Exists(ctx, app.db)
 		if err != nil {
