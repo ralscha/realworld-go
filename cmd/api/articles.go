@@ -235,7 +235,7 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	insertedArticle, err := app.getArticleById(r.Context(), newArticle.ID, userID)
+	insertedArticle, err := app.getArticleByID(r.Context(), newArticle.ID, userID)
 	if err != nil {
 		response.ServerError(w, err)
 		return
@@ -286,7 +286,7 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedArticle, err := app.getArticleById(r.Context(), article.ID, userID)
+	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, userID)
 	if err != nil {
 		response.ServerError(w, err)
 		return
@@ -320,7 +320,7 @@ func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, nil)
 }
 
-func (app *application) getArticleById(ctx context.Context, articleId, userID int64) (dto.Article, error) {
+func (app *application) getArticleByID(ctx context.Context, articleID, userID int64) (dto.Article, error) {
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -332,7 +332,7 @@ func (app *application) getArticleById(ctx context.Context, articleId, userID in
 			models.ArticleColumns.CreatedAt,
 			models.ArticleColumns.UpdatedAt,
 		),
-		models.ArticleWhere.ID.EQ(articleId)).One(ctx, app.db)
+		models.ArticleWhere.ID.EQ(articleID)).One(ctx, app.db)
 	if err != nil {
 		return dto.Article{}, err
 	}

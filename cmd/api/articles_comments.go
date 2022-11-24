@@ -59,7 +59,7 @@ func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Reques
 		Following: false,
 	}
 	insertedComment := dto.Comment{
-		Id:        comment.ID,
+		ID:        comment.ID,
 		CreatedAt: time.Unix(comment.CreatedAt, 0).Format(time.RFC3339),
 		UpdatedAt: time.Unix(comment.UpdatedAt, 0).Format(time.RFC3339),
 		Body:      comment.Body,
@@ -109,7 +109,7 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 			Following: followingMap[comment.R.User.ID],
 		}
 		commentsResponse = append(commentsResponse, dto.Comment{
-			Id:        comment.ID,
+			ID:        comment.ID,
 			CreatedAt: time.Unix(comment.CreatedAt, 0).Format(time.RFC3339),
 			UpdatedAt: time.Unix(comment.UpdatedAt, 0).Format(time.RFC3339),
 			Body:      comment.Body,
@@ -123,7 +123,7 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 func (app *application) articlesDeleteComment(w http.ResponseWriter, r *http.Request) {
 	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
 	articleSlug := chi.URLParam(r, "slug")
-	commentId, err := strconv.Atoi(chi.URLParam(r, "id"))
+	commentID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		response.NotFound(w, r)
 		return
@@ -139,7 +139,7 @@ func (app *application) articlesDeleteComment(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	comment, err := article.Comments(models.CommentWhere.ID.EQ(int64(commentId)), models.CommentWhere.UserID.EQ(userID)).One(r.Context(), app.db)
+	comment, err := article.Comments(models.CommentWhere.ID.EQ(int64(commentID)), models.CommentWhere.UserID.EQ(userID)).One(r.Context(), app.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)

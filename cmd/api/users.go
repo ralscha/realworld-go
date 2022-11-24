@@ -69,7 +69,7 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, done := app.createToken(w, r, err, user.ID)
+	token, done := app.createToken(w, r, user.ID)
 	if done {
 		return
 	}
@@ -87,7 +87,7 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, userResponse)
 }
 
-func (app *application) createToken(w http.ResponseWriter, r *http.Request, err error, userID int64) (string, bool) {
+func (app *application) createToken(w http.ResponseWriter, r *http.Request, userID int64) (string, bool) {
 	ctx, err := app.sessionManager.Load(r.Context(), "")
 	if err != nil {
 		response.ServerError(w, err)
@@ -159,7 +159,7 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 	}
 
 	fmt.Println("userID", newUser.ID)
-	token, done := app.createToken(w, r, err, newUser.ID)
+	token, done := app.createToken(w, r, newUser.ID)
 	if done {
 		return
 	}
