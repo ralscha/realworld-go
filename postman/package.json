@@ -2,7 +2,7 @@
   "name": "postman",
   "version": "1.0.0",
   "scripts": {
-    "start": "newman run postman.json --delay-request 500 --global-var \"APIURL=http://localhost:8080\" --global-var \"USERNAME=test\" --global-var \"EMAIL=test@mail.com\" --global-var \"PASSWORD=password\""
+    "start": "newman run postman.json --delay-request 500 --global-var \"APIURL=http://localhost:8080/api\" --global-var \"USERNAME=test\" --global-var \"EMAIL=test@mail.com\" --global-var \"PASSWORD=password\""
   },
   "devDependencies": {
     "newman": "5.3.2"

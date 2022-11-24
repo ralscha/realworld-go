@@ -61,18 +61,3 @@ func ValidateUserRegistrationRequest(u *UserRequest) *validate.Errors {
 		},
 	)
 }
-
-func ValidateUserUpdateRequest(u *UserRequest) *validate.Errors {
-	return validate.Validate(
-		&validators.StringIsPresent{
-			Name:    "email",
-			Field:   u.User.Email,
-			Message: "required",
-		},
-		&validators.StringIsPresent{
-			Name:    "username",
-			Field:   u.User.Username,
-			Message: "required",
-		},
-	)
-}

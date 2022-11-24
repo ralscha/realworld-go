@@ -1,3 +1,5 @@
 - transactions for inserts
 
 - check what we can do for relations
+
+- check app.sessionManager.Exists and use GetInt64

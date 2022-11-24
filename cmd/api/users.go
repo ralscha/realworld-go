@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/alexedwards/argon2id"
 	"github.com/gobuffalo/validate"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"net/http"
@@ -38,6 +37,7 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := models.Users(qm.Select(
+		models.UserColumns.ID,
 		models.UserColumns.Email,
 		models.UserColumns.Password,
 		models.UserColumns.Username,
@@ -210,12 +210,14 @@ func (app *application) usersGetCurrent(w http.ResponseWriter, r *http.Request) 
 
 func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 	var userUpdateRequest dto.UserRequest
-	if ok := request.DecodeJSONValidate[*dto.UserRequest](w, r, &userUpdateRequest, dto.ValidateUserUpdateRequest); !ok {
+	err := request.DecodeJSON(w, r, &userUpdateRequest)
+	if err != nil {
+		response.BadRequest(w, err)
 		return
 	}
 
 	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
-	user, err := models.Users(models.UserWhere.ID.EQ(userID)).One(r.Context(), app.db)
+	_, err = models.Users(qm.Select(models.UserColumns.ID), models.UserWhere.ID.EQ(userID)).One(r.Context(), app.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
@@ -225,38 +227,48 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usernameExists, err := models.Users(models.UserWhere.Username.EQ(userUpdateRequest.User.Username),
-		models.UserWhere.ID.NEQ(userID)).Exists(r.Context(), app.db)
-	if err != nil {
-		response.ServerError(w, err)
-		return
-	}
-	if usernameExists {
-		validationError := validate.Errors{
-			Errors: map[string][]string{"username": {"exists"}},
+	if userUpdateRequest.User.Username != "" {
+		usernameExists, err := models.Users(models.UserWhere.Username.EQ(userUpdateRequest.User.Username),
+			models.UserWhere.ID.NEQ(userID)).Exists(r.Context(), app.db)
+		if err != nil {
+			response.ServerError(w, err)
+			return
 		}
-		response.FailedValidation(w, &validationError)
-		return
+		if usernameExists {
+			validationError := validate.Errors{
+				Errors: map[string][]string{"username": {"exists"}},
+			}
+			response.FailedValidation(w, &validationError)
+			return
+		}
 	}
 
-	emailExists, err := models.Users(models.UserWhere.Email.EQ(userUpdateRequest.User.Email),
-		models.UserWhere.ID.NEQ(userID)).Exists(r.Context(), app.db)
-	if err != nil {
-		response.ServerError(w, err)
-		return
-	}
-	if emailExists {
-		validationError := validate.Errors{
-			Errors: map[string][]string{"email": {"exists"}},
+	if userUpdateRequest.User.Email != "" {
+		emailExists, err := models.Users(models.UserWhere.Email.EQ(userUpdateRequest.User.Email),
+			models.UserWhere.ID.NEQ(userID)).Exists(r.Context(), app.db)
+		if err != nil {
+			response.ServerError(w, err)
+			return
 		}
-		response.FailedValidation(w, &validationError)
-		return
+		if emailExists {
+			validationError := validate.Errors{
+				Errors: map[string][]string{"email": {"exists"}},
+			}
+			response.FailedValidation(w, &validationError)
+			return
+		}
 	}
 
-	user.Email = userUpdateRequest.User.Email
-	user.Username = userUpdateRequest.User.Username
-	user.Bio = null.StringFrom(userUpdateRequest.User.Bio)
-	user.Image = null.StringFrom(userUpdateRequest.User.Image)
+	updates := models.M{}
+
+	if userUpdateRequest.User.Username != "" {
+		updates[models.UserColumns.Username] = userUpdateRequest.User.Username
+	}
+	if userUpdateRequest.User.Email != "" {
+		updates[models.UserColumns.Email] = userUpdateRequest.User.Email
+	}
+	updates[models.UserColumns.Bio] = userUpdateRequest.User.Bio
+	updates[models.UserColumns.Image] = userUpdateRequest.User.Image
 
 	if userUpdateRequest.User.Password != "" {
 		hashedPassword, err := argon2id.CreateHash(userUpdateRequest.User.Password, &argon2id.Params{
@@ -270,10 +282,21 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 			response.ServerError(w, err)
 			return
 		}
-		user.Password = hashedPassword
+		updates[models.UserColumns.Password] = hashedPassword
 	}
 
-	err = user.Update(r.Context(), app.db, boil.Infer())
+	err = models.Users(models.UserWhere.ID.EQ(userID)).UpdateAll(r.Context(), app.db, updates)
+	if err != nil {
+		response.ServerError(w, err)
+		return
+	}
+
+	updatedUser, err := models.Users(qm.Select(
+		models.UserColumns.Email,
+		models.UserColumns.Username,
+		models.UserColumns.Bio,
+		models.UserColumns.Image),
+		models.UserWhere.ID.EQ(userID)).One(r.Context(), app.db)
 	if err != nil {
 		response.ServerError(w, err)
 		return
@@ -281,10 +304,10 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 
 	var userResponse = dto.UserWrapper{
 		User: dto.User{
-			Email:    user.Email,
-			Username: user.Username,
-			Bio:      user.Bio.String,
-			Image:    user.Image.String,
+			Email:    updatedUser.Email,
+			Username: updatedUser.Username,
+			Bio:      updatedUser.Bio.String,
+			Image:    updatedUser.Image.String,
 		},
 	}
 
