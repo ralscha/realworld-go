@@ -294,7 +294,7 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	updates := models.M{
-		models.ArticleColumns.UpdatedAt: time.Now().Unix(),
+		models.ArticleColumns.UpdatedAt: time.Now(),
 	}
 	if articleRequest.Article.Title != "" {
 		updates[models.ArticleColumns.Title] = articleRequest.Article.Title
