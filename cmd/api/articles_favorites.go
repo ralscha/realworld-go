@@ -13,7 +13,7 @@ import (
 )
 
 func (app *application) articlesFavorite(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 
@@ -48,7 +48,7 @@ func (app *application) articlesFavorite(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *application) articlesUnfavorite(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 

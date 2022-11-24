@@ -1,3 +1,0 @@
-- transactions for inserts
-
-- check what we can do for relations

@@ -31,7 +31,7 @@ func initAuth(config config.Config) error {
 }
 
 func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 
 	var userLoginRequest dto.UserRequest
 	if ok := request.DecodeJSONValidate[*dto.UserRequest](w, r, &userLoginRequest, dto.ValidateUserLoginRequest); !ok {
@@ -105,7 +105,7 @@ func (app *application) createToken(w http.ResponseWriter, r *http.Request, user
 }
 
 func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	var userLoginRequest dto.UserRequest
 	if ok := request.DecodeJSONValidate[*dto.UserRequest](w, r, &userLoginRequest, dto.ValidateUserRegistrationRequest); !ok {
 		return
@@ -182,7 +182,7 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) usersGetCurrent(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	user, err := models.AppUsers(qm.Select(
 		models.AppUserColumns.Email,
@@ -213,7 +213,7 @@ func (app *application) usersGetCurrent(w http.ResponseWriter, r *http.Request) 
 }
 
 func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	var userUpdateRequest dto.UserRequest
 	err := request.DecodeJSON(w, r, &userUpdateRequest)
 	if err != nil {

@@ -18,7 +18,7 @@ import (
 )
 
 func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	offsetParam := r.URL.Query().Get("offset")
 	limitParam := r.URL.Query().Get("limit")
@@ -83,7 +83,7 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	authentiated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
@@ -206,7 +206,7 @@ func (app *application) articleGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	var articleRequest dto.ArticleRequest
 	if ok := request.DecodeJSONValidate[*dto.ArticleRequest](w, r, &articleRequest, dto.ValidateArticleCreateRequest); !ok {
@@ -273,7 +273,7 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 
@@ -325,7 +325,7 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 
@@ -349,7 +349,7 @@ func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) getArticleByID(ctx context.Context, articleID int64, authentiated bool, userID int64) (dto.Article, error) {
-	tx := ctx.Value("tx").(*sql.Tx)
+	tx := ctx.Value(transactionKey).(*sql.Tx)
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -370,7 +370,7 @@ func (app *application) getArticleByID(ctx context.Context, articleID int64, aut
 }
 
 func (app *application) getArticleBySlug(ctx context.Context, articleSlug string, authenticated bool, userID int64) (dto.Article, error) {
-	tx := ctx.Value("tx").(*sql.Tx)
+	tx := ctx.Value(transactionKey).(*sql.Tx)
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -390,7 +390,7 @@ func (app *application) getArticleBySlug(ctx context.Context, articleSlug string
 }
 
 func (app *application) getArticle(ctx context.Context, article *models.Article, authenticated bool, userID int64) (dto.Article, error) {
-	tx := ctx.Value("tx").(*sql.Tx)
+	tx := ctx.Value(transactionKey).(*sql.Tx)
 	author, err := models.AppUsers(qm.Select(models.AppUserColumns.Username,
 		models.AppUserColumns.Bio, models.AppUserColumns.Image),
 		models.AppUserWhere.ID.EQ(article.UserID)).One(ctx, tx)

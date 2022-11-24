@@ -16,7 +16,7 @@ import (
 )
 
 func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	var commentRequest dto.CommentRequest
 	if ok := request.DecodeJSONValidate[*dto.CommentRequest](w, r, &commentRequest, dto.ValidateCommentRequest); !ok {
@@ -71,7 +71,7 @@ func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	authentiated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
@@ -132,7 +132,7 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *application) articlesDeleteComment(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
 	commentID, err := strconv.Atoi(chi.URLParam(r, "id"))

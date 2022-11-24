@@ -52,7 +52,7 @@ tasks:
     generates:
       - ./migrate{{.SUFFIX}}
 
-  db-migration-new-newl:
+  db-migration-new:
     deps: [build-goose]
     cmds:
       - ./migrate{{.SUFFIX}} create {{.CLI_ARGS}} sql

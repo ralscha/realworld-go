@@ -20,6 +20,12 @@ func (app *application) authenticatedOnly(next http.Handler) http.Handler {
 	})
 }
 
+type contextKey string
+
+const (
+	transactionKey contextKey = "transaction"
+)
+
 func (app *application) rwTransaction(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tx, err := app.database.BeginTx(r.Context(), nil)
@@ -29,7 +35,7 @@ func (app *application) rwTransaction(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "tx", tx)
+		ctx := context.WithValue(r.Context(), transactionKey, tx)
 		next.ServeHTTP(w, r.WithContext(ctx))
 
 		if err := tx.Commit(); err != nil {
@@ -48,7 +54,7 @@ func (app *application) readonlyTransaction(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "tx", tx)
+		ctx := context.WithValue(r.Context(), transactionKey, tx)
 		next.ServeHTTP(w, r.WithContext(ctx))
 
 		if err := tx.Rollback(); err != nil {

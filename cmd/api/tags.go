@@ -9,7 +9,7 @@ import (
 )
 
 func (app *application) tagsGet(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	tags, err := models.Tags().All(r.Context(), tx)
 	if err != nil {
 		response.InternalServerError(w, err)

@@ -13,7 +13,7 @@ import (
 )
 
 func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	authentiated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
@@ -64,7 +64,7 @@ func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) profilesFollow(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	username := chi.URLParam(r, "username")
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 
@@ -109,7 +109,7 @@ func (app *application) profilesFollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) profilesUnfollow(w http.ResponseWriter, r *http.Request) {
-	tx := r.Context().Value("tx").(*sql.Tx)
+	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	username := chi.URLParam(r, "username")
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 
