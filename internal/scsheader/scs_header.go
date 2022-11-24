@@ -24,18 +24,17 @@ func (s *HeaderSession) LoadAndSaveHeader(next http.Handler) http.Handler {
 		token := r.Header.Get(headerKey)
 		if token != "" {
 			token = strings.TrimPrefix(token, "Token ")
-			var err error
-			ctx, err = s.Load(r.Context(), token)
-			if err != nil {
-				_ = log.Output(2, err.Error())
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-
-			sr = r.WithContext(ctx)
-		} else {
-			sr = r
 		}
+
+		var err error
+		ctx, err = s.Load(r.Context(), token)
+		if err != nil {
+			_ = log.Output(2, err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		sr = r.WithContext(ctx)
 
 		next.ServeHTTP(w, sr)
 	})

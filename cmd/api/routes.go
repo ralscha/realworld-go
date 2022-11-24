@@ -31,11 +31,13 @@ func (app *application) routes() http.Handler {
 		r.Post("/users/login", app.usersLogin)
 		r.Post("/users", app.usersRegistration)
 		r.Get("/tags", app.tagsGet)
+
 		r.Group(func(r chi.Router) {
 			r.Use(app.sessionManager.LoadAndSaveHeader)
-			r.Get("/profiles/:username", app.profilesGet)
+			r.Get("/profiles/{username}", app.profilesGet)
 			r.Get("/articles", app.articlesList)
-			r.Get("/articles/:slug", app.articleGet)
+			r.Get("/articles/{slug}", app.articleGet)
+			r.Get("/articles/{slug}/comments", app.articlesGetComments)
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(app.sessionManager.LoadAndSaveHeader)
@@ -43,17 +45,17 @@ func (app *application) routes() http.Handler {
 
 			r.Get("/user", app.usersGetCurrent)
 			r.Put("/user", app.usersUpdate)
-			r.Post("/profiles/:username/follow", app.profilesFollow)
-			r.Delete("/profiles/:username/follow", app.profilesUnfollow)
+			r.Post("/profiles/{username}/follow", app.profilesFollow)
+			r.Delete("/profiles/{username}/follow", app.profilesUnfollow)
 			r.Get("/articles/feed", app.articlesFeed)
 			r.Post("/articles", app.articlesCreate)
-			r.Put("/articles/:slug", app.articlesUpdate)
-			r.Delete("/articles/:slug", app.articlesDelete)
-			r.Post("/articles/:slug/comments", app.articlesAddComment)
-			r.Get("/articles/:slug/comments", app.articlesGetComments)
-			r.Delete("/articles/:slug/comments/:id", app.articlesDeleteComment)
-			r.Post("/articles/:slug/favorite", app.articlesFavorite)
-			r.Delete("/articles/:slug/favorite", app.articlesUnfavorite)
+			r.Put("/articles/{slug}", app.articlesUpdate)
+			r.Delete("/articles/{slug}", app.articlesDelete)
+			r.Post("/articles/{slug}/comments", app.articlesAddComment)
+
+			r.Delete("/articles/{slug}/comments/:id", app.articlesDeleteComment)
+			r.Post("/articles/{slug}/favorite", app.articlesFavorite)
+			r.Delete("/articles/{slug}/favorite", app.articlesUnfavorite)
 		})
 	})
 

@@ -37,7 +37,7 @@ func (app *application) articlesFavorite(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, userID)
+	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
 	if err != nil {
 		response.ServerError(w, err)
 		return
@@ -66,7 +66,7 @@ func (app *application) articlesUnfavorite(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, userID)
+	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
 	if err != nil {
 		response.ServerError(w, err)
 		return

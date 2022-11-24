@@ -60,17 +60,23 @@ func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Reques
 	}
 	insertedComment := dto.Comment{
 		ID:        comment.ID,
-		CreatedAt: time.Unix(comment.CreatedAt, 0).Format(time.RFC3339),
-		UpdatedAt: time.Unix(comment.UpdatedAt, 0).Format(time.RFC3339),
+		CreatedAt: time.Unix(comment.CreatedAt, 1).UTC().Format(time.RFC3339Nano),
+		UpdatedAt: time.Unix(comment.UpdatedAt, 1).UTC().Format(time.RFC3339Nano),
 		Body:      comment.Body,
 		Author:    profile,
 	}
-	response.JSON(w, http.StatusCreated, insertedComment)
+	response.JSON(w, http.StatusCreated, dto.CommentOne{Comment: insertedComment})
 
 }
 
 func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	authentiated := false
+	var userID int64
+	if app.sessionManager.Exists(r.Context(), "userID") {
+		authentiated = true
+		userID = app.sessionManager.GetInt64(r.Context(), "userID")
+	}
+
 	articleSlug := chi.URLParam(r, "slug")
 
 	article, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.Slug.EQ(articleSlug)).One(r.Context(), app.db)
@@ -89,10 +95,13 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	followingIds, err := models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), app.db)
-	if err != nil {
-		response.ServerError(w, err)
-		return
+	var followingIds models.FollowSlice
+	if authentiated {
+		followingIds, err = models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), app.db)
+		if err != nil {
+			response.ServerError(w, err)
+			return
+		}
 	}
 
 	followingMap := make(map[int64]bool)
@@ -110,8 +119,8 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 		}
 		commentsResponse = append(commentsResponse, dto.Comment{
 			ID:        comment.ID,
-			CreatedAt: time.Unix(comment.CreatedAt, 0).Format(time.RFC3339),
-			UpdatedAt: time.Unix(comment.UpdatedAt, 0).Format(time.RFC3339),
+			CreatedAt: time.Unix(comment.CreatedAt, 1).UTC().Format(time.RFC3339Nano),
+			UpdatedAt: time.Unix(comment.UpdatedAt, 1).UTC().Format(time.RFC3339Nano),
 			Body:      comment.Body,
 			Author:    profile,
 		})

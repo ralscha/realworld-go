@@ -13,10 +13,11 @@ import (
 )
 
 func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
-	userIDOptional := app.sessionManager.Get(r.Context(), "userID")
-	userID, ok := userIDOptional.(int64)
-	if !ok {
-		userID = 0
+	authentiated := false
+	var userID int64
+	if app.sessionManager.Exists(r.Context(), "userID") {
+		authentiated = true
+		userID = app.sessionManager.GetInt64(r.Context(), "userID")
 	}
 
 	username := chi.URLParam(r, "username")
@@ -39,7 +40,7 @@ func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
 
 	following := false
 
-	if userID > 0 {
+	if authentiated {
 		following, err = models.Follows(models.FollowWhere.UserID.EQ(userID), models.FollowWhere.FollowID.EQ(user.ID)).
 			Exists(r.Context(), app.db)
 

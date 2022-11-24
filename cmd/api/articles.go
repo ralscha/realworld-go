@@ -58,7 +58,7 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	articlesCount, err := models.Articles(qm.Select(models.ArticleColumns.ID)).Count(r.Context(), app.db)
+	articlesCount, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.UserID.IN(followIds)).Count(r.Context(), app.db)
 	if err != nil {
 		response.ServerError(w, err)
 		return
@@ -66,7 +66,7 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 
 	articlesResponse := make([]dto.Article, len(articles))
 	for i, article := range articles {
-		dtoArticle, err := app.getArticle(r.Context(), article, userID)
+		dtoArticle, err := app.getArticle(r.Context(), article, true, userID)
 		if err != nil {
 			response.ServerError(w, err)
 			return
@@ -82,7 +82,12 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
-	userID := app.sessionManager.Get(r.Context(), "userID").(int64)
+	authentiated := false
+	var userID int64
+	if app.sessionManager.Exists(r.Context(), "userID") {
+		authentiated = true
+		userID = app.sessionManager.GetInt64(r.Context(), "userID")
+	}
 
 	offsetParam := r.URL.Query().Get("offset")
 	limitParam := r.URL.Query().Get("limit")
@@ -158,7 +163,7 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 
 	articlesResponse := make([]dto.Article, len(articles))
 	for i, article := range articles {
-		dtoArticle, err := app.getArticle(r.Context(), article, userID)
+		dtoArticle, err := app.getArticle(r.Context(), article, authentiated, userID)
 		if err != nil {
 			response.ServerError(w, err)
 			return
@@ -174,9 +179,16 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articleGet(w http.ResponseWriter, r *http.Request) {
+	authentiated := false
+	var userID int64
+	if app.sessionManager.Exists(r.Context(), "userID") {
+		authentiated = true
+		userID = app.sessionManager.GetInt64(r.Context(), "userID")
+	}
+
 	articleSlug := chi.URLParam(r, "slug")
 
-	article, err := app.getArticleBySlug(r.Context(), articleSlug, 0)
+	article, err := app.getArticleBySlug(r.Context(), articleSlug, authentiated, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
@@ -215,27 +227,38 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(articleRequest.Article.TagList) > 0 {
-		tags, err := models.Tags(models.TagWhere.Name.IN(articleRequest.Article.TagList)).All(r.Context(), app.db)
-		if err != nil {
-			response.ServerError(w, err)
-			return
+	for _, articleTag := range articleRequest.Article.TagList {
+		if articleTag == "" {
+			continue
 		}
-
-		for _, tag := range tags {
-			articleTag := models.ArticleTag{
-				ArticleID: newArticle.ID,
-				TagID:     tag.ID,
-			}
-			err = articleTag.Insert(r.Context(), app.db, boil.Infer())
-			if err != nil {
+		tag, err := models.Tags(models.TagWhere.Name.EQ(articleTag)).One(r.Context(), app.db)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				tag = &models.Tag{
+					Name: articleTag,
+				}
+				err = tag.Insert(r.Context(), app.db, boil.Infer())
+				if err != nil {
+					response.ServerError(w, err)
+					return
+				}
+			} else {
 				response.ServerError(w, err)
 				return
 			}
 		}
+		articleTag := models.ArticleTag{
+			ArticleID: newArticle.ID,
+			TagID:     tag.ID,
+		}
+		err = articleTag.Insert(r.Context(), app.db, boil.Infer())
+		if err != nil {
+			response.ServerError(w, err)
+			return
+		}
 	}
 
-	insertedArticle, err := app.getArticleByID(r.Context(), newArticle.ID, userID)
+	insertedArticle, err := app.getArticleByID(r.Context(), newArticle.ID, true, userID)
 	if err != nil {
 		response.ServerError(w, err)
 		return
@@ -251,7 +274,7 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 	articleSlug := chi.URLParam(r, "slug")
 
 	var articleRequest dto.ArticleRequest
-	if err := request.DecodeJSON(w, r, articleRequest); err != nil {
+	if err := request.DecodeJSON(w, r, &articleRequest); err != nil {
 		response.BadRequest(w, err)
 		return
 	}
@@ -286,7 +309,7 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, userID)
+	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
 	if err != nil {
 		response.ServerError(w, err)
 		return
@@ -320,7 +343,7 @@ func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, nil)
 }
 
-func (app *application) getArticleByID(ctx context.Context, articleID, userID int64) (dto.Article, error) {
+func (app *application) getArticleByID(ctx context.Context, articleID int64, authentiated bool, userID int64) (dto.Article, error) {
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -337,10 +360,10 @@ func (app *application) getArticleByID(ctx context.Context, articleID, userID in
 		return dto.Article{}, err
 	}
 
-	return app.getArticle(ctx, article, userID)
+	return app.getArticle(ctx, article, authentiated, userID)
 }
 
-func (app *application) getArticleBySlug(ctx context.Context, articleSlug string, userID int64) (dto.Article, error) {
+func (app *application) getArticleBySlug(ctx context.Context, articleSlug string, authenticated bool, userID int64) (dto.Article, error) {
 	article, err := models.Articles(
 		qm.Select(
 			models.ArticleColumns.ID,
@@ -356,10 +379,10 @@ func (app *application) getArticleBySlug(ctx context.Context, articleSlug string
 		return dto.Article{}, err
 	}
 
-	return app.getArticle(ctx, article, userID)
+	return app.getArticle(ctx, article, authenticated, userID)
 }
 
-func (app *application) getArticle(ctx context.Context, article *models.Article, userID int64) (dto.Article, error) {
+func (app *application) getArticle(ctx context.Context, article *models.Article, authenticated bool, userID int64) (dto.Article, error) {
 	author, err := models.Users(qm.Select(models.UserColumns.Username,
 		models.UserColumns.Bio, models.UserColumns.Image),
 		models.UserWhere.ID.EQ(article.UserID)).One(ctx, app.db)
@@ -384,7 +407,7 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 	}
 
 	favorited := false
-	if userID != 0 {
+	if authenticated {
 		favorited, err = models.ArticleFavorites(models.ArticleFavoriteWhere.UserID.EQ(userID),
 			models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).
 			Exists(ctx, app.db)
@@ -395,15 +418,15 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 
 	tags, err := models.Tags(qm.Select(models.TagColumns.Name),
 		qm.InnerJoin(models.TableNames.ArticleTag+" ON "+models.TableNames.ArticleTag+"."+models.ArticleTagColumns.TagID+" = "+models.TableNames.Tag+"."+models.TagColumns.ID),
-		models.ArticleTagWhere.ArticleID.EQ(article.ID)).
+		models.ArticleTagWhere.ArticleID.EQ(article.ID), qm.OrderBy(models.TagColumns.Name)).
 		All(ctx, app.db)
 	if err != nil {
 		return dto.Article{}, err
 	}
 
 	tagList := make([]string, len(tags))
-	for _, tag := range tags {
-		tagList = append(tagList, tag.Name)
+	for ix, tag := range tags {
+		tagList[ix] = tag.Name
 	}
 
 	favoritesCount, err := models.ArticleFavorites(models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).
@@ -412,16 +435,16 @@ func (app *application) getArticle(ctx context.Context, article *models.Article,
 		return dto.Article{}, err
 	}
 
-	createdAtTime := time.Unix(article.CreatedAt, 0)
-	updatedAtTime := time.Unix(article.UpdatedAt, 0)
+	createdAtTime := time.Unix(article.CreatedAt, 1)
+	updatedAtTime := time.Unix(article.UpdatedAt, 1)
 	articleDto := dto.Article{
 		Slug:           article.Slug,
 		Title:          article.Title,
 		Description:    article.Description,
 		Body:           article.Body,
 		TagList:        tagList,
-		CreatedAt:      createdAtTime.Format(time.RFC3339),
-		UpdatedAt:      updatedAtTime.Format(time.RFC3339),
+		CreatedAt:      createdAtTime.UTC().Format(time.RFC3339Nano),
+		UpdatedAt:      updatedAtTime.UTC().Format(time.RFC3339Nano),
 		Favorited:      favorited,
 		FavoritesCount: int(favoritesCount),
 		Author:         authorProfile,
