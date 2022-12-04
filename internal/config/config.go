@@ -47,7 +47,6 @@ func applyDefaults() {
 	viper.SetDefault("db.maxIdleConns", 2)
 	viper.SetDefault("db.maxIdleTime", "15m")
 	viper.SetDefault("db.maxLifetime", "2h")
-	viper.SetDefault("secureCookie", true)
 	viper.SetDefault("argon2.memory", 1<<17)
 	viper.SetDefault("argon2.iterations", 20)
 	viper.SetDefault("argon2.parallelism", 8)
@@ -67,7 +66,7 @@ func LoadConfig() (Config, error) {
 		return cfg, err
 	}
 
-	viper.SetEnvPrefix("GOTODO")
+	viper.SetEnvPrefix("REALWORLD")
 	viper.AutomaticEnv()
 
 	err = viper.Unmarshal(&cfg)
