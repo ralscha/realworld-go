@@ -7,7 +7,6 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"golang.org/x/exp/slog"
 	"log"
-	"math/rand"
 	"os"
 	"realworldgo.rasc.ch/internal/config"
 	"realworldgo.rasc.ch/internal/database"
@@ -23,8 +22,6 @@ type application struct {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("reading config failed %v\n", err)
@@ -44,7 +41,7 @@ func main() {
 
 	db, err := database.New(cfg)
 	if err != nil {
-		logger.Error("opening database connection failed", err)
+		slog.Error("opening database connection failed", err)
 		os.Exit(1)
 	}
 	defer func(db *sql.DB) {
@@ -57,7 +54,7 @@ func main() {
 
 	err = initAuth(cfg)
 	if err != nil {
-		logger.Error("init auth failed", err)
+		slog.Error("init auth failed", err)
 		os.Exit(1)
 	}
 
@@ -67,13 +64,13 @@ func main() {
 		sessionManager: &sm,
 	}
 
-	logger.Info("starting server", "addr", app.config.HTTP.Port, "version", version.Get())
+	slog.Info("starting server", "addr", app.config.HTTP.Port, "version", version.Get())
 
 	err = app.serve()
 	if err != nil {
-		logger.Error("http serve failed", err)
+		slog.Error("http serve failed", err)
 		os.Exit(1)
 	}
 
-	logger.Info("server stopped")
+	slog.Info("server stopped")
 }

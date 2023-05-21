@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"net/http"
 	"realworldgo.rasc.ch/internal/response"
 )
@@ -30,7 +29,6 @@ func (app *application) rwTransaction(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tx, err := app.database.BeginTx(r.Context(), nil)
 		if err != nil {
-			fmt.Println("rwTransaction: BeginTx failed")
 			response.InternalServerError(w, err)
 			return
 		}
@@ -39,7 +37,6 @@ func (app *application) rwTransaction(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 
 		if err := tx.Commit(); err != nil {
-			fmt.Println("Rolling back transaction")
 			response.InternalServerError(w, err)
 			return
 		}

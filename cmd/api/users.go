@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/alexedwards/argon2id"
 	"github.com/gobuffalo/validate"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -161,7 +160,6 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	fmt.Println("userID", newUser.ID)
 	token, done := app.createToken(w, r, newUser.ID)
 	if done {
 		return
