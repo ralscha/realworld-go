@@ -11,13 +11,13 @@ require (
 	github.com/go-chi/httprate v0.7.4
 	github.com/gobuffalo/validate v2.0.4+incompatible
 	github.com/gosimple/slug v1.13.1
-	github.com/jackc/pgx/v5 v5.3.1
-	github.com/pressly/goose/v3 v3.11.2
+	github.com/jackc/pgx/v5 v5.4.1
+	github.com/pressly/goose/v3 v3.13.0
 	github.com/spf13/viper v1.16.0
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.14.2
-	github.com/volatiletech/strmangle v0.0.4
-	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
+	github.com/volatiletech/strmangle v0.0.5
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 )
 
 require (
@@ -41,9 +41,9 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/volatiletech/inflect v0.0.1 // indirect
 	github.com/volatiletech/randomize v0.0.1 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/crypto v0.10.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/text v0.10.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
