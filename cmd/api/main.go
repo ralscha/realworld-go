@@ -5,8 +5,8 @@ import (
 	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"golang.org/x/exp/slog"
 	"log"
+	"log/slog"
 	"os"
 	"realworldgo.rasc.ch/internal/config"
 	"realworldgo.rasc.ch/internal/database"
@@ -32,9 +32,9 @@ func main() {
 	switch cfg.Environment {
 	case config.Development:
 		boil.DebugMode = true
-		logger = slog.New(slog.NewTextHandler(os.Stdout))
+		logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 	case config.Production:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout))
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	}
 
 	slog.SetDefault(logger)
