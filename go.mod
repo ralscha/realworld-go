@@ -4,20 +4,20 @@ go 1.21
 
 require (
 	github.com/alexedwards/argon2id v1.0.0
-	github.com/alexedwards/scs/postgresstore v0.0.0-20231113091146-cef4b05350c8
+	github.com/alexedwards/scs/postgresstore v0.0.0-20240203174419-a38e822451b6
 	github.com/alexedwards/scs/v2 v2.7.0
 	github.com/friendsofgo/errors v0.9.2
-	github.com/go-chi/chi/v5 v5.0.11
-	github.com/go-chi/httprate v0.8.0
+	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-chi/httprate v0.9.0
 	github.com/gobuffalo/validate v2.0.4+incompatible
-	github.com/gosimple/slug v1.13.1
-	github.com/jackc/pgx/v5 v5.5.2
-	github.com/pressly/goose/v3 v3.17.0
+	github.com/gosimple/slug v1.14.0
+	github.com/jackc/pgx/v5 v5.5.3
+	github.com/pressly/goose/v3 v3.18.0
 	github.com/spf13/viper v1.18.2
 	github.com/volatiletech/null/v8 v8.1.2
-	github.com/volatiletech/sqlboiler/v4 v4.16.1
+	github.com/volatiletech/sqlboiler/v4 v4.16.2
 	github.com/volatiletech/strmangle v0.0.6
-	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 )
 
 require (
@@ -30,6 +30,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
+	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.24.1 // indirect
@@ -46,9 +47,9 @@ require (
 	github.com/volatiletech/inflect v0.0.1 // indirect
 	github.com/volatiletech/randomize v0.0.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/crypto v0.20.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
