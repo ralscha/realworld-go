@@ -17,7 +17,7 @@ require (
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.18.0
 	github.com/volatiletech/strmangle v0.0.8
-	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac
+	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
 )
 
 require (
@@ -47,7 +47,7 @@ require (
 	github.com/volatiletech/inflect v0.0.1 // indirect
 	github.com/volatiletech/randomize v0.0.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
