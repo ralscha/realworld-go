@@ -2,9 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
-	"github.com/volatiletech/sqlboiler/v4/boil"
 	"log"
 	"log/slog"
 	"os"

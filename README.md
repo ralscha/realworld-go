@@ -39,7 +39,7 @@ Migration related tasks:
 
 ### SQLBoiler: database access
 
-The project utilizes [SQLBoiler](https://github.com/volatiletech/sqlboiler) as the database access layer. SQLBoiler depends on generated code that needs to be re-generated each time the database schema changes. SQLBoiler reads the information from the database and creates files in the folder [`internal/models`](https://github.com/ralscha/realworld-go/tree/main/internal/models). Database connection parameters are configured in the file [`sqlboiler/sqlboiler.toml`](https://github.com/ralscha/realworld-go/blob/main/sqlboiler/sqlboiler.toml). First apply the schema changes with goose and then run `task db-codegen` to generate the database code.
+The project utilizes [SQLBoiler](https://github.com/aarondl/sqlboiler) as the database access layer. SQLBoiler depends on generated code that needs to be re-generated each time the database schema changes. SQLBoiler reads the information from the database and creates files in the folder [`internal/models`](https://github.com/ralscha/realworld-go/tree/main/internal/models). Database connection parameters are configured in the file [`sqlboiler/sqlboiler.toml`](https://github.com/ralscha/realworld-go/blob/main/sqlboiler/sqlboiler.toml). First apply the schema changes with goose and then run `task db-codegen` to generate the database code.
 
 
 # Getting started
