@@ -1,6 +1,6 @@
 module realworldgo.rasc.ch
 
-go 1.25.2
+go 1.25.3
 
 require (
 	github.com/aarondl/null/v8 v8.1.3
@@ -17,7 +17,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/spf13/viper v1.21.0
-	golang.org/x/exp v0.0.0-20251009144603-d2f985daa21b
+	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 )
 
 require (
