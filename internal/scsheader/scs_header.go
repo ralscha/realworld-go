@@ -17,7 +17,6 @@ type HeaderSession struct {
 
 func (s *HeaderSession) LoadAndSaveHeader(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		var sr *http.Request
 		var ctx context.Context
 

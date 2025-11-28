@@ -1,20 +1,22 @@
+// Package main contains the article handlers for the RealWorld API.
 package main
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/go-chi/chi/v5"
 	"github.com/gosimple/slug"
-	"net/http"
 	"realworldgo.rasc.ch/cmd/api/dto"
 	"realworldgo.rasc.ch/internal/models"
 	"realworldgo.rasc.ch/internal/request"
 	"realworldgo.rasc.ch/internal/response"
-	"strconv"
-	"time"
 )
 
 func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
@@ -48,18 +50,18 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	followIds := make([]int64, len(follows))
+	followIDs := make([]int64, len(follows))
 	for i, follow := range follows {
-		followIds[i] = follow.FollowID
+		followIDs[i] = follow.FollowID
 	}
 
-	articles, err := models.Articles(models.ArticleWhere.UserID.IN(followIds), qm.Limit(limit), qm.Offset(offset)).All(r.Context(), tx)
+	articles, err := models.Articles(models.ArticleWhere.UserID.IN(followIDs), qm.Limit(limit), qm.Offset(offset)).All(r.Context(), tx)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
 	}
 
-	articlesCount, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.UserID.IN(followIds)).Count(r.Context(), tx)
+	articlesCount, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.UserID.IN(followIDs)).Count(r.Context(), tx)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
@@ -261,7 +263,7 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	insertedArticle, err := app.getArticleByID(r.Context(), newArticle.ID, true, userID)
+	insertedArticle, err := app.getArticleByID(r.Context(), newArticle.ID, userID)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
@@ -313,7 +315,7 @@ func (app *application) articlesUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
+	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, userID)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
@@ -348,7 +350,7 @@ func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, nil)
 }
 
-func (app *application) getArticleByID(ctx context.Context, articleID int64, authentiated bool, userID int64) (dto.Article, error) {
+func (app *application) getArticleByID(ctx context.Context, articleID int64, userID int64) (dto.Article, error) {
 	tx := ctx.Value(transactionKey).(*sql.Tx)
 	article, err := models.Articles(
 		qm.Select(
@@ -366,7 +368,7 @@ func (app *application) getArticleByID(ctx context.Context, articleID int64, aut
 		return dto.Article{}, err
 	}
 
-	return app.getArticle(ctx, article, authentiated, userID)
+	return app.getArticle(ctx, article, true, userID)
 }
 
 func (app *application) getArticleBySlug(ctx context.Context, articleSlug string, authenticated bool, userID int64) (dto.Article, error) {

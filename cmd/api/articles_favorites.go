@@ -3,10 +3,11 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"net/http"
+
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/go-chi/chi/v5"
-	"net/http"
 	"realworldgo.rasc.ch/cmd/api/dto"
 	"realworldgo.rasc.ch/internal/models"
 	"realworldgo.rasc.ch/internal/response"
@@ -38,7 +39,7 @@ func (app *application) articlesFavorite(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
+	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, userID)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
@@ -68,12 +69,11 @@ func (app *application) articlesUnfavorite(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, true, userID)
+	updatedArticle, err := app.getArticleByID(r.Context(), article.ID, userID)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
 	}
 
 	response.JSON(w, http.StatusOK, dto.ArticleOne{Article: updatedArticle})
-
 }

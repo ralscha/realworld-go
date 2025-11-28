@@ -3,11 +3,12 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"net/http"
+
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/alexedwards/argon2id"
 	"github.com/gobuffalo/validate"
-	"net/http"
 	"realworldgo.rasc.ch/cmd/api/dto"
 	"realworldgo.rasc.ch/internal/config"
 	"realworldgo.rasc.ch/internal/models"
@@ -176,7 +177,6 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 	}
 
 	response.JSON(w, http.StatusCreated, userResponse)
-
 }
 
 func (app *application) usersGetCurrent(w http.ResponseWriter, r *http.Request) {

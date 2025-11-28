@@ -3,16 +3,17 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/go-chi/chi/v5"
-	"net/http"
 	"realworldgo.rasc.ch/cmd/api/dto"
 	"realworldgo.rasc.ch/internal/models"
 	"realworldgo.rasc.ch/internal/request"
 	"realworldgo.rasc.ch/internal/response"
-	"strconv"
-	"time"
 )
 
 func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +68,6 @@ func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Reques
 		Author:    profile,
 	}
 	response.JSON(w, http.StatusCreated, dto.CommentOne{Comment: insertedComment})
-
 }
 
 func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Request) {
@@ -97,9 +97,9 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var followingIds models.FollowSlice
+	var followingIDs models.FollowSlice
 	if authentiated {
-		followingIds, err = models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), tx)
+		followingIDs, err = models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), tx)
 		if err != nil {
 			response.InternalServerError(w, err)
 			return
@@ -107,11 +107,11 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 	}
 
 	followingMap := make(map[int64]bool)
-	for _, following := range followingIds {
+	for _, following := range followingIDs {
 		followingMap[following.FollowID] = true
 	}
 
-	var commentsResponse []dto.Comment
+	commentsResponse := make([]dto.Comment, 0, len(comments))
 	for _, comment := range comments {
 		profile := dto.Profile{
 			Username:  comment.R.User.Username,

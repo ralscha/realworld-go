@@ -1,11 +1,13 @@
+// Package database provides database connection utilities.
 package database
 
 import (
 	"context"
 	"database/sql"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"realworldgo.rasc.ch/internal/config"
 	"time"
+
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
+	"realworldgo.rasc.ch/internal/config"
 )
 
 func New(cfg config.Config) (*sql.DB, error) {

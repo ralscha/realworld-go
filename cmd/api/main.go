@@ -1,18 +1,20 @@
+// Package main is the entry point for the RealWorld API server.
 package main
 
 import (
 	"database/sql"
-	"github.com/aarondl/sqlboiler/v4/boil"
-	"github.com/alexedwards/scs/postgresstore"
-	"github.com/alexedwards/scs/v2"
 	"log"
 	"log/slog"
 	"os"
+	"time"
+
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/alexedwards/scs/postgresstore"
+	"github.com/alexedwards/scs/v2"
 	"realworldgo.rasc.ch/internal/config"
 	"realworldgo.rasc.ch/internal/database"
 	"realworldgo.rasc.ch/internal/scsheader"
 	"realworldgo.rasc.ch/internal/version"
-	"time"
 )
 
 type application struct {
@@ -22,9 +24,14 @@ type application struct {
 }
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("reading config failed %v\n", err)
+		log.Printf("reading config failed %v\n", err)
+		return 1
 	}
 
 	var logger *slog.Logger
@@ -41,8 +48,8 @@ func main() {
 
 	db, err := database.New(cfg)
 	if err != nil {
-		slog.Error("opening database connection failed", err)
-		os.Exit(1)
+		log.Printf("opening database connection failed: %v", err)
+		return 1
 	}
 	defer func(db *sql.DB) {
 		_ = db.Close()
@@ -54,8 +61,8 @@ func main() {
 
 	err = initAuth(cfg)
 	if err != nil {
-		slog.Error("init auth failed", err)
-		os.Exit(1)
+		log.Printf("init auth failed: %v", err)
+		return 1
 	}
 
 	app := &application{
@@ -68,9 +75,10 @@ func main() {
 
 	err = app.serve()
 	if err != nil {
-		slog.Error("http serve failed", err)
-		os.Exit(1)
+		slog.Error("http serve failed", "error", err)
+		return 1
 	}
 
 	slog.Info("server stopped")
+	return 0
 }

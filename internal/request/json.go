@@ -1,3 +1,4 @@
+// Package request provides HTTP request parsing utilities.
 package request
 
 import (
@@ -6,9 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
+
 	"realworldgo.rasc.ch/cmd/api/dto"
 	"realworldgo.rasc.ch/internal/response"
-	"strings"
 )
 
 const maxBytes = 1_048_576
