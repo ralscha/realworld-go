@@ -1,13 +1,14 @@
 package main
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
-	"net/http"
 	"realworldgo.rasc.ch/internal/config"
 	"realworldgo.rasc.ch/internal/response"
-	"time"
 )
 
 func (app *application) routes() http.Handler {
@@ -59,7 +60,7 @@ func (app *application) routes() http.Handler {
 				r.Put("/articles/{slug}", app.articlesUpdate)
 				r.Delete("/articles/{slug}", app.articlesDelete)
 				r.Post("/articles/{slug}/comments", app.articlesAddComment)
-				r.Delete("/articles/{slug}/comments/:id", app.articlesDeleteComment)
+				r.Delete("/articles/{slug}/comments/{id}", app.articlesDeleteComment)
 				r.Post("/articles/{slug}/favorite", app.articlesFavorite)
 				r.Delete("/articles/{slug}/favorite", app.articlesUnfavorite)
 			})

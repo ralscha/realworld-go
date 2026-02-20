@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
+
 	"realworldgo.rasc.ch/internal/response"
 )
 
@@ -25,6 +27,26 @@ const (
 	transactionKey contextKey = "transaction"
 )
 
+type statusRecorder struct {
+	http.ResponseWriter
+	status      int
+	wroteHeader bool
+}
+
+func (sr *statusRecorder) WriteHeader(statusCode int) {
+	sr.status = statusCode
+	sr.wroteHeader = true
+	sr.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (sr *statusRecorder) Write(b []byte) (int, error) {
+	if !sr.wroteHeader {
+		sr.WriteHeader(http.StatusOK)
+	}
+
+	return sr.ResponseWriter.Write(b)
+}
+
 func (app *application) rwTransaction(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tx, err := app.database.BeginTx(r.Context(), nil)
@@ -33,13 +55,29 @@ func (app *application) rwTransaction(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), transactionKey, tx)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		committed := false
+		defer func() {
+			if !committed {
+				_ = tx.Rollback()
+			}
+		}()
 
-		if err := tx.Commit(); err != nil {
-			response.InternalServerError(w, err)
+		ctx := context.WithValue(r.Context(), transactionKey, tx)
+		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(recorder, r.WithContext(ctx))
+
+		if recorder.status >= http.StatusBadRequest {
 			return
 		}
+
+		if err := tx.Commit(); err != nil {
+			if !recorder.wroteHeader {
+				response.InternalServerError(w, err)
+			}
+			return
+		}
+
+		committed = true
 	})
 }
 
@@ -50,13 +88,13 @@ func (app *application) readonlyTransaction(next http.Handler) http.Handler {
 			response.InternalServerError(w, err)
 			return
 		}
+		defer func() {
+			if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+				response.InternalServerError(w, err)
+			}
+		}()
 
 		ctx := context.WithValue(r.Context(), transactionKey, tx)
 		next.ServeHTTP(w, r.WithContext(ctx))
-
-		if err := tx.Rollback(); err != nil {
-			response.InternalServerError(w, err)
-			return
-		}
 	})
 }

@@ -34,13 +34,18 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 
 	offset, err := strconv.Atoi(offsetParam)
 	if err != nil {
-		response.InternalServerError(w, err)
+		response.BadRequest(w, errors.New("offset must be a non-negative integer"))
 		return
 	}
 
 	limit, err := strconv.Atoi(limitParam)
 	if err != nil {
-		response.InternalServerError(w, err)
+		response.BadRequest(w, errors.New("limit must be a non-negative integer"))
+		return
+	}
+
+	if offset < 0 || limit < 0 {
+		response.BadRequest(w, errors.New("offset and limit must be non-negative"))
 		return
 	}
 
@@ -105,13 +110,18 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 
 	offset, err := strconv.Atoi(offsetParam)
 	if err != nil {
-		response.InternalServerError(w, err)
+		response.BadRequest(w, errors.New("offset must be a non-negative integer"))
 		return
 	}
 
 	limit, err := strconv.Atoi(limitParam)
 	if err != nil {
-		response.InternalServerError(w, err)
+		response.BadRequest(w, errors.New("limit must be a non-negative integer"))
+		return
+	}
+
+	if offset < 0 || limit < 0 {
+		response.BadRequest(w, errors.New("offset and limit must be non-negative"))
 		return
 	}
 

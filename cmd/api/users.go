@@ -18,9 +18,11 @@ import (
 
 var userNotFoundPasswordHash string
 
+const userNotFoundPassword string = "userNotFoundPassword"
+
 func initAuth(config config.Config) error {
 	var err error
-	userNotFoundPasswordHash, err = argon2id.CreateHash("userNotFoundPassword", &argon2id.Params{
+	userNotFoundPasswordHash, err = argon2id.CreateHash(userNotFoundPassword, &argon2id.Params{
 		Memory:      config.Argon2.Memory,
 		Iterations:  config.Argon2.Iterations,
 		Parallelism: config.Argon2.Parallelism,
@@ -49,7 +51,7 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			if _, err := argon2id.ComparePasswordAndHash(userNotFoundPasswordHash, userNotFoundPasswordHash); err != nil {
+			if _, err := argon2id.ComparePasswordAndHash(userNotFoundPassword, userNotFoundPasswordHash); err != nil {
 				response.InternalServerError(w, err)
 				return
 			}

@@ -17,6 +17,11 @@ const maxBytes = 1_048_576
 
 func DecodeJSONValidate[T any](w http.ResponseWriter, r *http.Request, dst T, validate dto.ValidatorFn[T]) bool {
 	if err := DecodeJSON(w, r, dst); err != nil {
+		if _, ok := errors.AsType[*json.InvalidUnmarshalError](err); ok {
+			response.InternalServerError(w, err)
+			return false
+		}
+
 		response.BadRequest(w, err)
 		return false
 	}
@@ -66,7 +71,7 @@ func DecodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 			return fmt.Errorf("body must not be larger than %d bytes", maxBytes)
 
 		case errors.As(err, &invalidUnmarshalError):
-			panic(err)
+			return err
 
 		default:
 			return err
