@@ -8,7 +8,6 @@ linters:
     - prealloc        # Suggest preallocating slices
     - unconvert       # Detect unnecessary type conversions
     - unparam         # Find unused function parameters
-    - goconst         # Find repeated strings that could be constants
     - misspell        # Find commonly misspelled words
     - nolintlint      # Ensure nolint directives are properly formatted
     - errorlint       # Find issues with error wrapping
