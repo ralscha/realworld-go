@@ -28,8 +28,8 @@ type AppUser struct {
 	Username string      `boil:"username" json:"username" toml:"username" yaml:"username"`
 	Password string      `boil:"password" json:"password" toml:"password" yaml:"password"`
 	Email    string      `boil:"email" json:"email" toml:"email" yaml:"email"`
-	Bio      null.String `boil:"bio" json:"bio,omitempty" toml:"bio" yaml:"bio,omitempty"`
-	Image    null.String `boil:"image" json:"image,omitempty" toml:"image" yaml:"image,omitempty"`
+	Bio      null.String `boil:"bio" json:"bio,omitzero" toml:"bio" yaml:"bio,omitempty"`
+	Image    null.String `boil:"image" json:"image,omitzero" toml:"image" yaml:"image,omitempty"`
 
 	R *appUserR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L appUserL  `boil:"-" json:"-" toml:"-" yaml:"-"`

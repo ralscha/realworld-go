@@ -36,7 +36,7 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 	tx := r.Context().Value(transactionKey).(*sql.Tx)
 
 	var userLoginRequest dto.UserRequest
-	if ok := request.DecodeJSONValidate[*dto.UserRequest](w, r, &userLoginRequest, dto.ValidateUserLoginRequest); !ok {
+	if ok := request.DecodeJSONValidate(w, r, &userLoginRequest, dto.ValidateUserLoginRequest); !ok {
 		return
 	}
 

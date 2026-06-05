@@ -49,7 +49,7 @@ func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	user, err := models.AppUsers(qm.Select(models.AppUserColumns.Username, models.AppUserColumns.Bio, models.AppUserColumns.Image), models.AppUserWhere.ID.EQ(article.UserID)).One(r.Context(), tx)
+	user, err := models.AppUsers(qm.Select(models.AppUserColumns.Username, models.AppUserColumns.Bio, models.AppUserColumns.Image), models.AppUserWhere.ID.EQ(userID)).One(r.Context(), tx)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return

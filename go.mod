@@ -1,6 +1,6 @@
 module realworldgo.rasc.ch
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/aarondl/null/v8 v8.1.3
@@ -14,7 +14,7 @@ require (
 	github.com/go-chi/httprate v0.15.0
 	github.com/gobuffalo/validate v2.0.4+incompatible
 	github.com/gosimple/slug v1.15.0
-	github.com/jackc/pgx/v5 v5.9.2
+	github.com/jackc/pgx/v5 v5.10.0
 	github.com/pressly/goose/v3 v3.27.1
 	github.com/spf13/viper v1.21.0
 )

@@ -6,7 +6,9 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -59,28 +61,42 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 	for i, follow := range follows {
 		followIDs[i] = follow.FollowID
 	}
+	if len(followIDs) == 0 {
+		response.JSON(w, http.StatusOK, dto.ArticlesMany{
+			Articles:      []dto.Article{},
+			ArticlesCount: 0,
+		})
+		return
+	}
 
-	articles, err := models.Articles(models.ArticleWhere.UserID.IN(followIDs), qm.Limit(limit), qm.Offset(offset)).All(r.Context(), tx)
+	articlesCount, err := models.Articles(models.ArticleWhere.UserID.IN(followIDs)).Count(r.Context(), tx)
+	if err != nil {
+		response.InternalServerError(w, err)
+		return
+	}
+	if articlesCount == 0 {
+		response.JSON(w, http.StatusOK, dto.ArticlesMany{
+			Articles:      []dto.Article{},
+			ArticlesCount: 0,
+		})
+		return
+	}
+
+	articles, err := models.Articles(
+		models.ArticleWhere.UserID.IN(followIDs),
+		qm.OrderBy(models.ArticleColumns.CreatedAt+" DESC"),
+		qm.Limit(limit),
+		qm.Offset(offset),
+	).All(r.Context(), tx)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
 	}
 
-	articlesCount, err := models.Articles(qm.Select(models.ArticleColumns.ID), models.ArticleWhere.UserID.IN(followIDs)).Count(r.Context(), tx)
+	articlesResponse, err := app.getArticles(r.Context(), articles, true, userID)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
-	}
-
-	articlesResponse := make([]dto.Article, len(articles))
-	for i, article := range articles {
-		dtoArticle, err := app.getArticle(r.Context(), article, true, userID)
-		if err != nil {
-			response.InternalServerError(w, err)
-			return
-		}
-
-		articlesResponse[i] = dtoArticle
 	}
 
 	response.JSON(w, http.StatusOK, dto.ArticlesMany{
@@ -153,8 +169,6 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 		mods = append(mods, models.AppUserWhere.Username.EQ(authorParam))
 	}
 
-	mods = append(mods, qm.Limit(limit), qm.Offset(offset))
-
 	articlesCount, err := models.Articles(mods...).Count(r.Context(), tx)
 	if err != nil {
 		response.InternalServerError(w, err)
@@ -169,21 +183,19 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	articles, err := models.Articles(mods...).All(r.Context(), tx)
+	queryMods := append([]qm.QueryMod{}, mods...)
+	queryMods = append(queryMods, qm.OrderBy(models.ArticleColumns.CreatedAt+" DESC"), qm.Limit(limit), qm.Offset(offset))
+
+	articles, err := models.Articles(queryMods...).All(r.Context(), tx)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
 	}
 
-	articlesResponse := make([]dto.Article, len(articles))
-	for i, article := range articles {
-		dtoArticle, err := app.getArticle(r.Context(), article, authentiated, userID)
-		if err != nil {
-			response.InternalServerError(w, err)
-			return
-		}
-
-		articlesResponse[i] = dtoArticle
+	articlesResponse, err := app.getArticles(r.Context(), articles, authentiated, userID)
+	if err != nil {
+		response.InternalServerError(w, err)
+		return
 	}
 
 	response.JSON(w, http.StatusOK, dto.ArticlesMany{
@@ -221,7 +233,7 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	var articleRequest dto.ArticleRequest
-	if ok := request.DecodeJSONValidate[*dto.ArticleRequest](w, r, &articleRequest, dto.ValidateArticleCreateRequest); !ok {
+	if ok := request.DecodeJSONValidate(w, r, &articleRequest, dto.ValidateArticleCreateRequest); !ok {
 		return
 	}
 
@@ -402,71 +414,207 @@ func (app *application) getArticleBySlug(ctx context.Context, articleSlug string
 }
 
 func (app *application) getArticle(ctx context.Context, article *models.Article, authenticated bool, userID int64) (dto.Article, error) {
+	articles, err := app.getArticles(ctx, models.ArticleSlice{article}, authenticated, userID)
+	if err != nil {
+		return dto.Article{}, err
+	}
+	if len(articles) == 0 {
+		return dto.Article{}, sql.ErrNoRows
+	}
+
+	return articles[0], nil
+}
+
+func (app *application) getArticles(ctx context.Context, articles models.ArticleSlice, authenticated bool, userID int64) ([]dto.Article, error) {
 	tx := ctx.Value(transactionKey).(*sql.Tx)
-	author, err := models.AppUsers(qm.Select(models.AppUserColumns.Username,
-		models.AppUserColumns.Bio, models.AppUserColumns.Image),
-		models.AppUserWhere.ID.EQ(article.UserID)).One(ctx, tx)
-	if err != nil {
-		return dto.Article{}, err
+	if len(articles) == 0 {
+		return []dto.Article{}, nil
 	}
 
-	following := false
-	if userID != 0 {
-		following, err = models.Follows(models.FollowWhere.UserID.EQ(userID), models.FollowWhere.FollowID.EQ(author.ID)).
-			Exists(ctx, tx)
-		if err != nil {
-			return dto.Article{}, err
+	articleIDs := make([]int64, 0, len(articles))
+	authorIDs := make([]int64, 0, len(articles))
+	seenAuthors := make(map[int64]struct{}, len(articles))
+	for _, article := range articles {
+		articleIDs = append(articleIDs, article.ID)
+		if _, ok := seenAuthors[article.UserID]; !ok {
+			seenAuthors[article.UserID] = struct{}{}
+			authorIDs = append(authorIDs, article.UserID)
 		}
 	}
 
-	authorProfile := dto.Profile{
-		Username:  author.Username,
-		Bio:       author.Bio.String,
-		Image:     author.Image.String,
-		Following: following,
+	authors, err := models.AppUsers(
+		qm.Select(
+			models.AppUserColumns.ID,
+			models.AppUserColumns.Username,
+			models.AppUserColumns.Bio,
+			models.AppUserColumns.Image,
+		),
+		models.AppUserWhere.ID.IN(authorIDs),
+	).All(ctx, tx)
+	if err != nil {
+		return nil, err
 	}
 
-	favorited := false
+	authorsByID := make(map[int64]*models.AppUser, len(authors))
+	for _, author := range authors {
+		authorsByID[author.ID] = author
+	}
+
+	followingByAuthorID := make(map[int64]bool, len(authorIDs))
+	if userID != 0 && len(authorIDs) > 0 {
+		follows, err := models.Follows(
+			qm.Select(models.FollowColumns.FollowID),
+			models.FollowWhere.UserID.EQ(userID),
+			models.FollowWhere.FollowID.IN(authorIDs),
+		).All(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		for _, follow := range follows {
+			followingByAuthorID[follow.FollowID] = true
+		}
+	}
+
+	favoritesCountByArticleID, err := favoriteCountsByArticleID(ctx, tx, articleIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	favoritedByArticleID := make(map[int64]bool, len(articleIDs))
 	if authenticated {
-		favorited, err = models.ArticleFavorites(models.ArticleFavoriteWhere.UserID.EQ(userID),
-			models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).
-			Exists(ctx, tx)
+		favoritedByArticleID, err = favoritedArticleIDs(ctx, tx, userID, articleIDs)
 		if err != nil {
-			return dto.Article{}, err
+			return nil, err
 		}
 	}
 
-	tags, err := models.Tags(qm.Select(models.TagColumns.Name),
-		qm.InnerJoin(models.TableNames.ArticleTag+" ON "+models.TableNames.ArticleTag+"."+models.ArticleTagColumns.TagID+" = "+models.TableNames.Tag+"."+models.TagColumns.ID),
-		models.ArticleTagWhere.ArticleID.EQ(article.ID), qm.OrderBy(models.TagColumns.Name)).
-		All(ctx, tx)
+	articleTags, err := models.ArticleTags(
+		qm.Select(models.ArticleTagColumns.ArticleID, models.ArticleTagColumns.TagID),
+		qm.Load(models.ArticleTagRels.Tag, qm.Select(models.TagColumns.ID, models.TagColumns.Name)),
+		models.ArticleTagWhere.ArticleID.IN(articleIDs),
+	).All(ctx, tx)
 	if err != nil {
-		return dto.Article{}, err
+		return nil, err
 	}
 
-	tagList := make([]string, len(tags))
-	for ix, tag := range tags {
-		tagList[ix] = tag.Name
+	tagsByArticleID := make(map[int64][]string, len(articleIDs))
+	for _, articleTag := range articleTags {
+		if articleTag.R == nil || articleTag.R.Tag == nil {
+			continue
+		}
+		tagsByArticleID[articleTag.ArticleID] = append(tagsByArticleID[articleTag.ArticleID], articleTag.R.Tag.Name)
+	}
+	for _, tagList := range tagsByArticleID {
+		sort.Strings(tagList)
 	}
 
-	favoritesCount, err := models.ArticleFavorites(models.ArticleFavoriteWhere.ArticleID.EQ(article.ID)).
-		Count(ctx, tx)
+	articlesResponse := make([]dto.Article, len(articles))
+	for i, article := range articles {
+		author, ok := authorsByID[article.UserID]
+		if !ok {
+			return nil, sql.ErrNoRows
+		}
+
+		articlesResponse[i] = dto.Article{
+			Slug:           article.Slug,
+			Title:          article.Title,
+			Description:    article.Description,
+			Body:           article.Body,
+			TagList:        tagsByArticleID[article.ID],
+			CreatedAt:      article.CreatedAt.UTC().Format(time.RFC3339Nano),
+			UpdatedAt:      article.UpdatedAt.UTC().Format(time.RFC3339Nano),
+			Favorited:      favoritedByArticleID[article.ID],
+			FavoritesCount: favoritesCountByArticleID[article.ID],
+			Author: dto.Profile{
+				Username:  author.Username,
+				Bio:       author.Bio.String,
+				Image:     author.Image.String,
+				Following: followingByAuthorID[article.UserID],
+			},
+		}
+		if articlesResponse[i].TagList == nil {
+			articlesResponse[i].TagList = []string{}
+		}
+	}
+
+	return articlesResponse, nil
+}
+
+func favoriteCountsByArticleID(ctx context.Context, tx *sql.Tx, articleIDs []int64) (map[int64]int, error) {
+	favoritesCountByArticleID := make(map[int64]int, len(articleIDs))
+	if len(articleIDs) == 0 {
+		return favoritesCountByArticleID, nil
+	}
+
+	query := "SELECT article_id, count(*) FROM article_favorite WHERE article_id IN (" +
+		postgresPlaceholders(1, len(articleIDs)) +
+		") GROUP BY article_id"
+	rows, err := tx.QueryContext(ctx, query, int64Args(articleIDs)...)
 	if err != nil {
-		return dto.Article{}, err
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var articleID int64
+		var count int
+		if err := rows.Scan(&articleID, &count); err != nil {
+			return nil, err
+		}
+		favoritesCountByArticleID[articleID] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
-	articleDto := dto.Article{
-		Slug:           article.Slug,
-		Title:          article.Title,
-		Description:    article.Description,
-		Body:           article.Body,
-		TagList:        tagList,
-		CreatedAt:      article.CreatedAt.UTC().Format(time.RFC3339Nano),
-		UpdatedAt:      article.UpdatedAt.UTC().Format(time.RFC3339Nano),
-		Favorited:      favorited,
-		FavoritesCount: int(favoritesCount),
-		Author:         authorProfile,
+	return favoritesCountByArticleID, nil
+}
+
+func favoritedArticleIDs(ctx context.Context, tx *sql.Tx, userID int64, articleIDs []int64) (map[int64]bool, error) {
+	favoritedByArticleID := make(map[int64]bool, len(articleIDs))
+	if len(articleIDs) == 0 {
+		return favoritedByArticleID, nil
 	}
 
-	return articleDto, nil
+	args := make([]any, 0, len(articleIDs)+1)
+	args = append(args, userID)
+	args = append(args, int64Args(articleIDs)...)
+
+	query := "SELECT article_id FROM article_favorite WHERE user_id = $1 AND article_id IN (" +
+		postgresPlaceholders(2, len(articleIDs)) +
+		")"
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var articleID int64
+		if err := rows.Scan(&articleID); err != nil {
+			return nil, err
+		}
+		favoritedByArticleID[articleID] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return favoritedByArticleID, nil
+}
+
+func postgresPlaceholders(start, count int) string {
+	placeholders := make([]string, count)
+	for i := range placeholders {
+		placeholders[i] = "$" + strconv.Itoa(start+i)
+	}
+	return strings.Join(placeholders, ",")
+}
+
+func int64Args(values []int64) []any {
+	args := make([]any, len(values))
+	for i, value := range values {
+		args[i] = value
+	}
+	return args
 }
