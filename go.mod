@@ -33,7 +33,7 @@ require (
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.24.1 // indirect
-	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.4.2 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
 	github.com/serenize/snaker v0.0.0-20201027110005-a7ad2135616e // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
@@ -44,9 +44,9 @@ require (
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.52.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 )
