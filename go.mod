@@ -15,7 +15,7 @@ require (
 	github.com/gobuffalo/validate v2.0.4+incompatible
 	github.com/gosimple/slug v1.15.0
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/pressly/goose/v3 v3.27.2
+	github.com/pressly/goose/v3 v3.27.3
 	github.com/spf13/viper v1.21.0
 )
 
