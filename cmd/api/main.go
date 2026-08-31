@@ -55,9 +55,9 @@ func run() int {
 		_ = db.Close()
 	}(db)
 
-	sm := scsheader.HeaderSession{SessionManager: scs.New(),
-		Store:    postgresstore.NewWithCleanupInterval(db, 30*time.Minute),
-		Lifetime: 24 * time.Hour}
+	sm := scsheader.HeaderSession{SessionManager: scs.New()}
+	sm.Store = postgresstore.NewWithCleanupInterval(db, 30*time.Minute)
+	sm.Lifetime = 24 * time.Hour
 
 	err = initAuth(cfg)
 	if err != nil {
