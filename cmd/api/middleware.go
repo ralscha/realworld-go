@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
+	"maps"
 	"net/http"
 
 	"realworldgo.rasc.ch/internal/response"
@@ -16,7 +19,7 @@ func (app *application) authenticatedOnly(next http.Handler) http.Handler {
 		if ok && userID > 0 {
 			next.ServeHTTP(w, r)
 		} else {
-			response.Forbidden(w)
+			response.Unauthorized(w)
 		}
 	})
 }
@@ -27,24 +30,43 @@ const (
 	transactionKey contextKey = "transaction"
 )
 
-type statusRecorder struct {
-	http.ResponseWriter
-	status      int
-	wroteHeader bool
+type bufferedResponse struct {
+	header http.Header
+	body   bytes.Buffer
+	status int
 }
 
-func (sr *statusRecorder) WriteHeader(statusCode int) {
-	sr.status = statusCode
-	sr.wroteHeader = true
-	sr.ResponseWriter.WriteHeader(statusCode)
+func newBufferedResponse() *bufferedResponse {
+	return &bufferedResponse{header: make(http.Header)}
 }
 
-func (sr *statusRecorder) Write(b []byte) (int, error) {
-	if !sr.wroteHeader {
-		sr.WriteHeader(http.StatusOK)
+func (br *bufferedResponse) Header() http.Header {
+	return br.header
+}
+
+func (br *bufferedResponse) WriteHeader(statusCode int) {
+	if br.status == 0 {
+		br.status = statusCode
 	}
+}
 
-	return sr.ResponseWriter.Write(b)
+func (br *bufferedResponse) Write(b []byte) (int, error) {
+	if br.status == 0 {
+		br.status = http.StatusOK
+	}
+	return br.body.Write(b)
+}
+
+func (br *bufferedResponse) writeTo(w http.ResponseWriter) {
+	maps.Copy(w.Header(), br.header)
+	status := br.status
+	if status == 0 {
+		status = http.StatusOK
+	}
+	w.WriteHeader(status)
+	if _, err := br.body.WriteTo(w); err != nil {
+		slog.Error("writing buffered response failed", "error", err)
+	}
 }
 
 func (app *application) rwTransaction(next http.Handler) http.Handler {
@@ -55,29 +77,33 @@ func (app *application) rwTransaction(next http.Handler) http.Handler {
 			return
 		}
 
-		committed := false
+		finished := false
 		defer func() {
-			if !committed {
+			if !finished {
 				_ = tx.Rollback()
 			}
 		}()
 
 		ctx := context.WithValue(r.Context(), transactionKey, tx)
-		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(recorder, r.WithContext(ctx))
+		buffer := newBufferedResponse()
+		next.ServeHTTP(buffer, r.WithContext(ctx))
 
-		if recorder.status >= http.StatusBadRequest {
+		if buffer.status >= http.StatusBadRequest {
+			if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+				slog.Error("rolling back transaction failed", "error", err)
+			}
+			finished = true
+			buffer.writeTo(w)
 			return
 		}
 
 		if err := tx.Commit(); err != nil {
-			if !recorder.wroteHeader {
-				response.InternalServerError(w, err)
-			}
+			response.InternalServerError(w, err)
 			return
 		}
 
-		committed = true
+		finished = true
+		buffer.writeTo(w)
 	})
 }
 
@@ -90,7 +116,7 @@ func (app *application) readonlyTransaction(next http.Handler) http.Handler {
 		}
 		defer func() {
 			if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-				response.InternalServerError(w, err)
+				slog.Error("rolling back read-only transaction failed", "error", err)
 			}
 		}()
 

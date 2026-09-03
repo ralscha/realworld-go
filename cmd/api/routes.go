@@ -18,13 +18,16 @@ func (app *application) routes() http.Handler {
 	mux.MethodNotAllowed(response.MethodNotAllowed)
 
 	// Middleware
-	mux.Use(middleware.RealIP)
+	// The API is deployed behind one trusted reverse-proxy hop. Reading the
+	// rightmost X-Forwarded-For entry prevents a client-supplied prefix from
+	// spoofing the address appended by that proxy.
+	mux.Use(middleware.ClientIPFromXFF())
 	if app.config.Environment == config.Development {
 		mux.Use(middleware.Logger)
 	}
 
 	mux.Use(middleware.Recoverer)
-	mux.Use(httprate.LimitAll(1_000, 1*time.Minute))
+	mux.Use(httprate.LimitBy(1_000, 1*time.Minute, clientIPRateLimitKey))
 	mux.Use(middleware.Timeout(15 * time.Second))
 	mux.Use(middleware.NoCache)
 
@@ -73,4 +76,8 @@ func (app *application) routes() http.Handler {
 	})
 
 	return mux
+}
+
+func clientIPRateLimitKey(r *http.Request) (string, error) {
+	return httprate.CanonicalizeIP(middleware.GetClientIP(r.Context())), nil
 }

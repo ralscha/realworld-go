@@ -22,14 +22,28 @@ const userNotFoundPassword string = "userNotFoundPassword"
 
 func initAuth(config config.Config) error {
 	var err error
-	userNotFoundPasswordHash, err = argon2id.CreateHash(userNotFoundPassword, &argon2id.Params{
+	userNotFoundPasswordHash, err = argon2id.CreateHash(userNotFoundPassword, passwordHashParams(config))
+	return err
+}
+
+func passwordHashParams(config config.Config) *argon2id.Params {
+	return &argon2id.Params{
 		Memory:      config.Argon2.Memory,
 		Iterations:  config.Argon2.Iterations,
 		Parallelism: config.Argon2.Parallelism,
 		SaltLength:  config.Argon2.SaltLength,
 		KeyLength:   config.Argon2.KeyLength,
-	})
-	return err
+	}
+}
+
+func userResponse(user *models.AppUser, token string) dto.UserWrapper {
+	return dto.UserWrapper{User: dto.User{
+		Email:    user.Email,
+		Token:    token,
+		Username: user.Username,
+		Bio:      user.Bio.String,
+		Image:    user.Image.String,
+	}}
 }
 
 func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
@@ -73,37 +87,26 @@ func (app *application) usersLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, done := app.createToken(w, r, user.ID)
-	if done {
+	token, err := app.createToken(r, user.ID)
+	if err != nil {
+		response.InternalServerError(w, err)
 		return
 	}
 
-	var userResponse = dto.UserWrapper{
-		User: dto.User{
-			Email:    user.Email,
-			Token:    token,
-			Username: user.Username,
-			Bio:      user.Bio.String,
-			Image:    user.Image.String,
-		},
-	}
-
-	response.JSON(w, http.StatusOK, userResponse)
+	response.JSON(w, http.StatusOK, userResponse(user, token))
 }
 
-func (app *application) createToken(w http.ResponseWriter, r *http.Request, userID int64) (string, bool) {
+func (app *application) createToken(r *http.Request, userID int64) (string, error) {
 	ctx, err := app.sessionManager.Load(r.Context(), "")
 	if err != nil {
-		response.InternalServerError(w, err)
-		return "", true
+		return "", err
 	}
 	app.sessionManager.Put(ctx, "userID", userID)
 	token, _, err := app.sessionManager.Commit(ctx)
 	if err != nil {
-		response.InternalServerError(w, err)
-		return "", true
+		return "", err
 	}
-	return token, false
+	return token, nil
 }
 
 func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request) {
@@ -139,13 +142,7 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	hashedPassword, err := argon2id.CreateHash(userLoginRequest.User.Password, &argon2id.Params{
-		Memory:      app.config.Argon2.Memory,
-		Iterations:  app.config.Argon2.Iterations,
-		Parallelism: app.config.Argon2.Parallelism,
-		SaltLength:  app.config.Argon2.SaltLength,
-		KeyLength:   app.config.Argon2.KeyLength,
-	})
+	hashedPassword, err := argon2id.CreateHash(userLoginRequest.User.Password, passwordHashParams(*app.config))
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
@@ -163,22 +160,13 @@ func (app *application) usersRegistration(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	token, done := app.createToken(w, r, newUser.ID)
-	if done {
+	token, err := app.createToken(r, newUser.ID)
+	if err != nil {
+		response.InternalServerError(w, err)
 		return
 	}
 
-	var userResponse = dto.UserWrapper{
-		User: dto.User{
-			Email:    newUser.Email,
-			Token:    token,
-			Username: newUser.Username,
-			Bio:      newUser.Bio.String,
-			Image:    newUser.Image.String,
-		},
-	}
-
-	response.JSON(w, http.StatusCreated, userResponse)
+	response.JSON(w, http.StatusCreated, userResponse(&newUser, token))
 }
 
 func (app *application) usersGetCurrent(w http.ResponseWriter, r *http.Request) {
@@ -200,29 +188,18 @@ func (app *application) usersGetCurrent(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var userResponse = dto.UserWrapper{
-		User: dto.User{
-			Email:    user.Email,
-			Username: user.Username,
-			Bio:      user.Bio.String,
-			Image:    user.Image.String,
-		},
-	}
-
-	response.JSON(w, http.StatusOK, userResponse)
+	response.JSON(w, http.StatusOK, userResponse(user, app.sessionManager.Token(r.Context())))
 }
 
 func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 	tx := r.Context().Value(transactionKey).(*sql.Tx)
-	var userUpdateRequest dto.UserRequest
-	err := request.DecodeJSON(w, r, &userUpdateRequest)
-	if err != nil {
-		response.BadRequest(w, err)
+	var userUpdateRequest dto.UserUpdateRequest
+	if ok := request.DecodeJSONValidate(w, r, &userUpdateRequest, dto.ValidateUserUpdateRequest); !ok {
 		return
 	}
 
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
-	_, err = models.AppUsers(qm.Select(models.AppUserColumns.ID), models.AppUserWhere.ID.EQ(userID)).One(r.Context(), tx)
+	_, err := models.AppUsers(qm.Select(models.AppUserColumns.ID), models.AppUserWhere.ID.EQ(userID)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
@@ -232,8 +209,8 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if userUpdateRequest.User.Username != "" {
-		usernameExists, err := models.AppUsers(models.AppUserWhere.Username.EQ(userUpdateRequest.User.Username),
+	if userUpdateRequest.User.Username != nil {
+		usernameExists, err := models.AppUsers(models.AppUserWhere.Username.EQ(*userUpdateRequest.User.Username),
 			models.AppUserWhere.ID.NEQ(userID)).Exists(r.Context(), tx)
 		if err != nil {
 			response.InternalServerError(w, err)
@@ -248,8 +225,8 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if userUpdateRequest.User.Email != "" {
-		emailExists, err := models.AppUsers(models.AppUserWhere.Email.EQ(userUpdateRequest.User.Email),
+	if userUpdateRequest.User.Email != nil {
+		emailExists, err := models.AppUsers(models.AppUserWhere.Email.EQ(*userUpdateRequest.User.Email),
 			models.AppUserWhere.ID.NEQ(userID)).Exists(r.Context(), tx)
 		if err != nil {
 			response.InternalServerError(w, err)
@@ -266,23 +243,21 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 
 	updates := models.M{}
 
-	if userUpdateRequest.User.Username != "" {
-		updates[models.AppUserColumns.Username] = userUpdateRequest.User.Username
+	if userUpdateRequest.User.Username != nil {
+		updates[models.AppUserColumns.Username] = *userUpdateRequest.User.Username
 	}
-	if userUpdateRequest.User.Email != "" {
-		updates[models.AppUserColumns.Email] = userUpdateRequest.User.Email
+	if userUpdateRequest.User.Email != nil {
+		updates[models.AppUserColumns.Email] = *userUpdateRequest.User.Email
 	}
-	updates[models.AppUserColumns.Bio] = userUpdateRequest.User.Bio
-	updates[models.AppUserColumns.Image] = userUpdateRequest.User.Image
+	if userUpdateRequest.User.Bio != nil {
+		updates[models.AppUserColumns.Bio] = *userUpdateRequest.User.Bio
+	}
+	if userUpdateRequest.User.Image != nil {
+		updates[models.AppUserColumns.Image] = *userUpdateRequest.User.Image
+	}
 
-	if userUpdateRequest.User.Password != "" {
-		hashedPassword, err := argon2id.CreateHash(userUpdateRequest.User.Password, &argon2id.Params{
-			Memory:      app.config.Argon2.Memory,
-			Iterations:  app.config.Argon2.Iterations,
-			Parallelism: app.config.Argon2.Parallelism,
-			SaltLength:  app.config.Argon2.SaltLength,
-			KeyLength:   app.config.Argon2.KeyLength,
-		})
+	if userUpdateRequest.User.Password != nil {
+		hashedPassword, err := argon2id.CreateHash(*userUpdateRequest.User.Password, passwordHashParams(*app.config))
 		if err != nil {
 			response.InternalServerError(w, err)
 			return
@@ -290,10 +265,12 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 		updates[models.AppUserColumns.Password] = hashedPassword
 	}
 
-	err = models.AppUsers(models.AppUserWhere.ID.EQ(userID)).UpdateAll(r.Context(), tx, updates)
-	if err != nil {
-		response.InternalServerError(w, err)
-		return
+	if len(updates) > 0 {
+		err = models.AppUsers(models.AppUserWhere.ID.EQ(userID)).UpdateAll(r.Context(), tx, updates)
+		if err != nil {
+			response.InternalServerError(w, err)
+			return
+		}
 	}
 
 	updatedUser, err := models.AppUsers(qm.Select(
@@ -307,14 +284,5 @@ func (app *application) usersUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userResponse = dto.UserWrapper{
-		User: dto.User{
-			Email:    updatedUser.Email,
-			Username: updatedUser.Username,
-			Bio:      updatedUser.Bio.String,
-			Image:    updatedUser.Image.String,
-		},
-	}
-
-	response.JSON(w, http.StatusOK, userResponse)
+	response.JSON(w, http.StatusOK, userResponse(updatedUser, app.sessionManager.Token(r.Context())))
 }

@@ -24,30 +24,9 @@ import (
 func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
-	offsetParam := r.URL.Query().Get("offset")
-	limitParam := r.URL.Query().Get("limit")
-
-	if offsetParam == "" {
-		offsetParam = "0"
-	}
-	if limitParam == "" {
-		limitParam = "20"
-	}
-
-	offset, err := strconv.Atoi(offsetParam)
+	offset, limit, err := pagination(r)
 	if err != nil {
-		response.BadRequest(w, errors.New("offset must be a non-negative integer"))
-		return
-	}
-
-	limit, err := strconv.Atoi(limitParam)
-	if err != nil {
-		response.BadRequest(w, errors.New("limit must be a non-negative integer"))
-		return
-	}
-
-	if offset < 0 || limit < 0 {
-		response.BadRequest(w, errors.New("offset and limit must be non-negative"))
+		response.BadRequest(w, err)
 		return
 	}
 
@@ -107,37 +86,16 @@ func (app *application) articlesFeed(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 	tx := r.Context().Value(transactionKey).(*sql.Tx)
-	authentiated := false
+	authenticated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
-		authentiated = true
+		authenticated = true
 		userID = app.sessionManager.GetInt64(r.Context(), "userID")
 	}
 
-	offsetParam := r.URL.Query().Get("offset")
-	limitParam := r.URL.Query().Get("limit")
-
-	if offsetParam == "" {
-		offsetParam = "0"
-	}
-	if limitParam == "" {
-		limitParam = "20"
-	}
-
-	offset, err := strconv.Atoi(offsetParam)
+	offset, limit, err := pagination(r)
 	if err != nil {
-		response.BadRequest(w, errors.New("offset must be a non-negative integer"))
-		return
-	}
-
-	limit, err := strconv.Atoi(limitParam)
-	if err != nil {
-		response.BadRequest(w, errors.New("limit must be a non-negative integer"))
-		return
-	}
-
-	if offset < 0 || limit < 0 {
-		response.BadRequest(w, errors.New("offset and limit must be non-negative"))
+		response.BadRequest(w, err)
 		return
 	}
 
@@ -148,25 +106,26 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 	var mods []qm.QueryMod
 
 	if tagParam != "" {
-		mods = append(mods,
-			qm.InnerJoin(models.TableNames.ArticleTag+" ON "+models.TableNames.ArticleTag+"."+models.ArticleTagColumns.ArticleID+" = "+models.TableNames.Article+"."+models.ArticleColumns.ID))
-		mods = append(mods,
-			qm.InnerJoin(models.TableNames.Tag+" ON "+models.TableNames.Tag+"."+models.TagColumns.ID+" = "+models.TableNames.ArticleTag+"."+models.ArticleTagColumns.TagID))
-		mods = append(mods, models.TagWhere.Name.EQ(tagParam))
+		mods = append(mods, qm.Where(`EXISTS (
+			SELECT 1 FROM article_tag
+			JOIN tag ON tag.id = article_tag.tag_id
+			WHERE article_tag.article_id = "article".id AND tag.name = ?
+		)`, tagParam))
 	}
 
 	if favoritedParam != "" {
-		mods = append(mods,
-			qm.InnerJoin(models.TableNames.ArticleFavorite+" ON "+models.TableNames.ArticleFavorite+"."+models.ArticleFavoriteColumns.ArticleID+" = "+models.TableNames.Article+"."+models.ArticleColumns.ID))
-		mods = append(mods,
-			qm.InnerJoin(models.TableNames.AppUser+" ON "+models.TableNames.AppUser+"."+models.AppUserColumns.ID+" = "+models.TableNames.ArticleFavorite+"."+models.ArticleFavoriteColumns.UserID))
-		mods = append(mods, models.AppUserWhere.Username.EQ(favoritedParam))
+		mods = append(mods, qm.Where(`EXISTS (
+			SELECT 1 FROM article_favorite
+			JOIN app_user ON app_user.id = article_favorite.user_id
+			WHERE article_favorite.article_id = "article".id AND app_user.username = ?
+		)`, favoritedParam))
 	}
 
 	if authorParam != "" {
-		mods = append(mods,
-			qm.InnerJoin(models.TableNames.AppUser+" ON "+models.TableNames.AppUser+"."+models.AppUserColumns.ID+" = "+models.TableNames.Article+"."+models.ArticleColumns.UserID))
-		mods = append(mods, models.AppUserWhere.Username.EQ(authorParam))
+		mods = append(mods, qm.Where(`EXISTS (
+			SELECT 1 FROM app_user
+			WHERE app_user.id = "article".user_id AND app_user.username = ?
+		)`, authorParam))
 	}
 
 	articlesCount, err := models.Articles(mods...).Count(r.Context(), tx)
@@ -192,7 +151,7 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	articlesResponse, err := app.getArticles(r.Context(), articles, authentiated, userID)
+	articlesResponse, err := app.getArticles(r.Context(), articles, authenticated, userID)
 	if err != nil {
 		response.InternalServerError(w, err)
 		return
@@ -205,16 +164,16 @@ func (app *application) articlesList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) articleGet(w http.ResponseWriter, r *http.Request) {
-	authentiated := false
+	authenticated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
-		authentiated = true
+		authenticated = true
 		userID = app.sessionManager.GetInt64(r.Context(), "userID")
 	}
 
 	articleSlug := chi.URLParam(r, "slug")
 
-	article, err := app.getArticleBySlug(r.Context(), articleSlug, authentiated, userID)
+	article, err := app.getArticleBySlug(r.Context(), articleSlug, authenticated, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)
@@ -254,31 +213,30 @@ func (app *application) articlesCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	seenTags := make(map[string]struct{}, len(articleRequest.Article.TagList))
 	for _, articleTag := range articleRequest.Article.TagList {
 		if articleTag == "" {
 			continue
 		}
-		tag, err := models.Tags(models.TagWhere.Name.EQ(articleTag)).One(r.Context(), tx)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				tag = &models.Tag{
-					Name: articleTag,
-				}
-				err = tag.Insert(r.Context(), tx, boil.Infer())
-				if err != nil {
-					response.InternalServerError(w, err)
-					return
-				}
-			} else {
-				response.InternalServerError(w, err)
-				return
-			}
+		if _, exists := seenTags[articleTag]; exists {
+			continue
 		}
-		articleTag := models.ArticleTag{
+		seenTags[articleTag] = struct{}{}
+
+		tag := models.Tag{Name: articleTag}
+		err := tag.Upsert(r.Context(), tx, true,
+			[]string{models.TagColumns.Name},
+			boil.Whitelist(models.TagColumns.Name),
+			boil.Infer())
+		if err != nil {
+			response.InternalServerError(w, err)
+			return
+		}
+		newArticleTag := models.ArticleTag{
 			ArticleID: newArticle.ID,
 			TagID:     tag.ID,
 		}
-		err = articleTag.Insert(r.Context(), tx, boil.Infer())
+		err = newArticleTag.Insert(r.Context(), tx, boil.Infer())
 		if err != nil {
 			response.InternalServerError(w, err)
 			return
@@ -370,6 +328,29 @@ func (app *application) articlesDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.JSON(w, http.StatusOK, nil)
+}
+
+func pagination(r *http.Request) (int, int, error) {
+	offset, err := nonNegativeInt(r.URL.Query().Get("offset"), 0, "offset")
+	if err != nil {
+		return 0, 0, err
+	}
+	limit, err := nonNegativeInt(r.URL.Query().Get("limit"), 20, "limit")
+	if err != nil {
+		return 0, 0, err
+	}
+	return offset, limit, nil
+}
+
+func nonNegativeInt(value string, defaultValue int, name string) (int, error) {
+	if value == "" {
+		return defaultValue, nil
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil || n < 0 {
+		return 0, errors.New(name + " must be a non-negative integer")
+	}
+	return n, nil
 }
 
 func (app *application) getArticleByID(ctx context.Context, articleID int64, userID int64) (dto.Article, error) {

@@ -14,10 +14,10 @@ import (
 
 func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
 	tx := r.Context().Value(transactionKey).(*sql.Tx)
-	authentiated := false
+	authenticated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
-		authentiated = true
+		authenticated = true
 		userID = app.sessionManager.GetInt64(r.Context(), "userID")
 	}
 
@@ -41,7 +41,7 @@ func (app *application) profilesGet(w http.ResponseWriter, r *http.Request) {
 
 	following := false
 
-	if authentiated {
+	if authenticated {
 		following, err = models.Follows(models.FollowWhere.UserID.EQ(userID), models.FollowWhere.FollowID.EQ(user.ID)).
 			Exists(r.Context(), tx)
 

@@ -72,10 +72,10 @@ func (app *application) articlesAddComment(w http.ResponseWriter, r *http.Reques
 
 func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Request) {
 	tx := r.Context().Value(transactionKey).(*sql.Tx)
-	authentiated := false
+	authenticated := false
 	var userID int64
 	if app.sessionManager.Exists(r.Context(), "userID") {
-		authentiated = true
+		authenticated = true
 		userID = app.sessionManager.GetInt64(r.Context(), "userID")
 	}
 
@@ -98,7 +98,7 @@ func (app *application) articlesGetComments(w http.ResponseWriter, r *http.Reque
 	}
 
 	var followingIDs models.FollowSlice
-	if authentiated {
+	if authenticated {
 		followingIDs, err = models.Follows(qm.Select(models.FollowColumns.FollowID), models.FollowWhere.UserID.EQ(userID)).All(r.Context(), tx)
 		if err != nil {
 			response.InternalServerError(w, err)
@@ -135,8 +135,8 @@ func (app *application) articlesDeleteComment(w http.ResponseWriter, r *http.Req
 	tx := r.Context().Value(transactionKey).(*sql.Tx)
 	userID := app.sessionManager.GetInt64(r.Context(), "userID")
 	articleSlug := chi.URLParam(r, "slug")
-	commentID, err := strconv.Atoi(chi.URLParam(r, "id"))
-	if err != nil {
+	commentID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || commentID <= 0 {
 		response.NotFound(w, r)
 		return
 	}
@@ -151,7 +151,7 @@ func (app *application) articlesDeleteComment(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	comment, err := article.Comments(models.CommentWhere.ID.EQ(int64(commentID)), models.CommentWhere.UserID.EQ(userID)).One(r.Context(), tx)
+	comment, err := article.Comments(models.CommentWhere.ID.EQ(commentID), models.CommentWhere.UserID.EQ(userID)).One(r.Context(), tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.NotFound(w, r)

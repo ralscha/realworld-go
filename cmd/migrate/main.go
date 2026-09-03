@@ -7,9 +7,9 @@ import (
 	"log"
 	"os"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"realworldgo.rasc.ch/internal/config"
+	"realworldgo.rasc.ch/internal/database"
 	"realworldgo.rasc.ch/migrations"
 )
 
@@ -37,8 +37,7 @@ func run() int {
 		return 1
 	}
 
-	dsn := "postgres://" + cfg.DB.User + ":" + cfg.DB.Password + "@" + cfg.DB.Connection + "/" + cfg.DB.Database
-	db, err := goose.OpenDBWithDriver("pgx", dsn)
+	db, err := goose.OpenDBWithDriver("pgx", database.DSN(cfg))
 	if err != nil {
 		log.Printf("goose: failed to open DB: %v\n", err)
 		return 1

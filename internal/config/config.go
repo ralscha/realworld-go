@@ -1,6 +1,9 @@
 package config
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/spf13/viper"
 )
 
@@ -16,7 +19,7 @@ type Config struct {
 	DB          struct {
 		User         string
 		Password     string
-		Connection   string
+		Host         string
 		Database     string
 		MaxOpenConns int
 		MaxIdleConns int
@@ -38,40 +41,45 @@ type Config struct {
 	}
 }
 
-func applyDefaults() {
-	viper.SetDefault("environment", Production)
-	viper.SetDefault("http.readTimeoutInSeconds", 30)
-	viper.SetDefault("http.writeTimeoutInSeconds", 30)
-	viper.SetDefault("http.idleTimeoutInSeconds", 120)
-	viper.SetDefault("db.maxOpenConns", 4)
-	viper.SetDefault("db.maxIdleConns", 2)
-	viper.SetDefault("db.maxIdleTime", "15m")
-	viper.SetDefault("db.maxLifetime", "2h")
-	viper.SetDefault("argon2.memory", 1<<17)
-	viper.SetDefault("argon2.iterations", 20)
-	viper.SetDefault("argon2.parallelism", 8)
-	viper.SetDefault("argon2.saltLength", 16)
-	viper.SetDefault("argon2.keyLength", 32)
+func newViper() *viper.Viper {
+	v := viper.New()
+	v.SetDefault("environment", Production)
+	v.SetDefault("http.readTimeoutInSeconds", 30)
+	v.SetDefault("http.writeTimeoutInSeconds", 30)
+	v.SetDefault("http.idleTimeoutInSeconds", 120)
+	v.SetDefault("db.maxOpenConns", 4)
+	v.SetDefault("db.maxIdleConns", 2)
+	v.SetDefault("db.maxIdleTime", "15m")
+	v.SetDefault("db.maxLifetime", "2h")
+	v.SetDefault("argon2.memory", 1<<17)
+	v.SetDefault("argon2.iterations", 20)
+	v.SetDefault("argon2.parallelism", 8)
+	v.SetDefault("argon2.saltLength", 16)
+	v.SetDefault("argon2.keyLength", 32)
+	v.SetEnvPrefix("REALWORLD")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+	return v
 }
 
 func LoadConfig() (Config, error) {
 	var cfg Config
 
-	applyDefaults()
-	viper.SetConfigName("app")
-	viper.SetConfigType("env")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
+	v := newViper()
+	v.SetConfigName("app")
+	v.SetConfigType("env")
+	v.AddConfigPath(".")
+	err := v.ReadInConfig()
 	if err != nil {
 		return cfg, err
 	}
 
-	viper.SetEnvPrefix("REALWORLD")
-	viper.AutomaticEnv()
-
-	err = viper.Unmarshal(&cfg)
+	err = v.Unmarshal(&cfg)
 	if err != nil {
 		return cfg, err
+	}
+	if cfg.Environment != Development && cfg.Environment != Production {
+		return cfg, fmt.Errorf("unsupported environment %q", cfg.Environment)
 	}
 
 	return cfg, nil
