@@ -43,7 +43,11 @@ func TestRWTransactionDoesNotPublishResponseBeforeCommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("closing database: %v", err)
+		}
+	})
 
 	app := application{database: db}
 	handler := app.rwTransaction(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

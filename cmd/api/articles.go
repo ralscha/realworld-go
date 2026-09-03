@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -521,20 +520,23 @@ func (app *application) getArticles(ctx context.Context, articles models.Article
 	return articlesResponse, nil
 }
 
-func favoriteCountsByArticleID(ctx context.Context, tx *sql.Tx, articleIDs []int64) (map[int64]int, error) {
-	favoritesCountByArticleID := make(map[int64]int, len(articleIDs))
+func favoriteCountsByArticleID(ctx context.Context, tx *sql.Tx, articleIDs []int64) (counts map[int64]int, err error) {
+	counts = make(map[int64]int, len(articleIDs))
 	if len(articleIDs) == 0 {
-		return favoritesCountByArticleID, nil
+		return counts, nil
 	}
 
-	query := "SELECT article_id, count(*) FROM article_favorite WHERE article_id IN (" +
-		postgresPlaceholders(1, len(articleIDs)) +
-		") GROUP BY article_id"
-	rows, err := tx.QueryContext(ctx, query, int64Args(articleIDs)...)
+	const query = `SELECT article_id, count(*)
+		FROM article_favorite
+		WHERE article_id = ANY($1)
+		GROUP BY article_id`
+	rows, err := tx.QueryContext(ctx, query, articleIDs)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err = errors.Join(err, rows.Close())
+	}()
 
 	for rows.Next() {
 		var articleID int64
@@ -542,60 +544,42 @@ func favoriteCountsByArticleID(ctx context.Context, tx *sql.Tx, articleIDs []int
 		if err := rows.Scan(&articleID, &count); err != nil {
 			return nil, err
 		}
-		favoritesCountByArticleID[articleID] = count
+		counts[articleID] = count
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return favoritesCountByArticleID, nil
+	return counts, nil
 }
 
-func favoritedArticleIDs(ctx context.Context, tx *sql.Tx, userID int64, articleIDs []int64) (map[int64]bool, error) {
-	favoritedByArticleID := make(map[int64]bool, len(articleIDs))
+func favoritedArticleIDs(ctx context.Context, tx *sql.Tx, userID int64, articleIDs []int64) (favorites map[int64]bool, err error) {
+	favorites = make(map[int64]bool, len(articleIDs))
 	if len(articleIDs) == 0 {
-		return favoritedByArticleID, nil
+		return favorites, nil
 	}
 
-	args := make([]any, 0, len(articleIDs)+1)
-	args = append(args, userID)
-	args = append(args, int64Args(articleIDs)...)
-
-	query := "SELECT article_id FROM article_favorite WHERE user_id = $1 AND article_id IN (" +
-		postgresPlaceholders(2, len(articleIDs)) +
-		")"
-	rows, err := tx.QueryContext(ctx, query, args...)
+	const query = `SELECT article_id
+		FROM article_favorite
+		WHERE user_id = $1 AND article_id = ANY($2)`
+	rows, err := tx.QueryContext(ctx, query, userID, articleIDs)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err = errors.Join(err, rows.Close())
+	}()
 
 	for rows.Next() {
 		var articleID int64
 		if err := rows.Scan(&articleID); err != nil {
 			return nil, err
 		}
-		favoritedByArticleID[articleID] = true
+		favorites[articleID] = true
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return favoritedByArticleID, nil
-}
-
-func postgresPlaceholders(start, count int) string {
-	placeholders := make([]string, count)
-	for i := range placeholders {
-		placeholders[i] = "$" + strconv.Itoa(start+i)
-	}
-	return strings.Join(placeholders, ",")
-}
-
-func int64Args(values []int64) []any {
-	args := make([]any, len(values))
-	for i, value := range values {
-		args[i] = value
-	}
-	return args
+	return favorites, nil
 }
