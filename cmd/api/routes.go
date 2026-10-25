@@ -18,10 +18,12 @@ func (app *application) routes() http.Handler {
 	mux.MethodNotAllowed(response.MethodNotAllowed)
 
 	// Middleware
-	// The API is deployed behind one trusted reverse-proxy hop. Reading the
-	// rightmost X-Forwarded-For entry prevents a client-supplied prefix from
-	// spoofing the address appended by that proxy.
-	mux.Use(middleware.ClientIPFromXFF())
+	// Accept forwarded addresses only from explicitly trusted reverse proxies.
+	if len(app.config.HTTP.TrustedProxyCIDRs) == 0 {
+		mux.Use(middleware.ClientIPFromRemoteAddr)
+	} else {
+		mux.Use(middleware.ClientIPFromXFF(app.config.HTTP.TrustedProxyCIDRs...))
+	}
 	if app.config.Environment == config.Development {
 		mux.Use(middleware.Logger)
 	}

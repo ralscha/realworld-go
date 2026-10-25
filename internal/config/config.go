@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/netip"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -27,6 +28,7 @@ type Config struct {
 		MaxLifetime  string
 	}
 	HTTP struct {
+		TrustedProxyCIDRs     []string
 		Port                  string
 		ReadTimeoutInSeconds  int64
 		WriteTimeoutInSeconds int64
@@ -44,6 +46,7 @@ type Config struct {
 func newViper() *viper.Viper {
 	v := viper.New()
 	v.SetDefault("environment", Production)
+	v.SetDefault("http.trustedProxyCIDRs", []string{"127.0.0.1/32", "::1/128"})
 	v.SetDefault("http.readTimeoutInSeconds", 30)
 	v.SetDefault("http.writeTimeoutInSeconds", 30)
 	v.SetDefault("http.idleTimeoutInSeconds", 120)
@@ -78,9 +81,21 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return cfg, err
 	}
+	if err := cfg.validateTrustedProxies(); err != nil {
+		return cfg, err
+	}
 	if cfg.Environment != Development && cfg.Environment != Production {
 		return cfg, fmt.Errorf("unsupported environment %q", cfg.Environment)
 	}
 
 	return cfg, nil
+}
+
+func (cfg Config) validateTrustedProxies() error {
+	for _, prefix := range cfg.HTTP.TrustedProxyCIDRs {
+		if _, err := netip.ParsePrefix(prefix); err != nil {
+			return fmt.Errorf("invalid http.trustedProxyCIDRs entry %q: %w", prefix, err)
+		}
+	}
+	return nil
 }

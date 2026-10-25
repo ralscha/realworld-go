@@ -54,3 +54,11 @@ The project utilizes [SQLBoiler](https://github.com/aarondl/sqlboiler) as the da
  npm install   
  npm start
 ```
+
+## Reverse proxy configuration
+
+Set `REALWORLD_HTTP_TRUSTEDPROXYCIDRS` to a comma-separated list of the CIDRs
+of your reverse proxies, for example `10.0.0.2/32,::1/128`. Only loopback
+addresses are trusted by default. A Docker or remote proxy needs an explicit
+entry. Do not trust client networks or `0.0.0.0/0`; untrusted peers' forwarded
+headers are ignored for rate limiting.
